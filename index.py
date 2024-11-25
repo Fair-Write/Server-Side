@@ -1,14 +1,35 @@
 
-import json
 import subprocess
 from fastapi import FastAPI
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers import pipeline
 import torch
+import language_tool_python
+from fastapi.middleware.cors import CORSMiddleware
+import ollama
+
+
+
+tool = language_tool_python.LanguageTool('en-US')
 
 # Initialize FastAPI
 app = FastAPI()
+
+origins = [
+    "http://localhost:5173",
+    "http://localhost",
+    "http://localhost:8080",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # # Load the model and tokenizer
 # model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.2-3B-Instruct")
@@ -190,25 +211,61 @@ async def generate(prompt: Prompt):
     ***Instructions:***
     - Maintain the original meaning.
     - Correct any grammatical or spelling errors.
-    - Return only the revised text without additional text.
+    - Return only the revised text without additional notes.
     """
+
+    try:
+        output = ollama.generate(model='llama3.2', prompt=prompt)
+        return {"output": output["response"]}
+
+    except Exception as e:
+        return {"error": str(e)}      
+
+
+@app.post("/grammar")
+async def generate(prompt: Prompt):
+    text = prompt.prompt
     
-    command = ["ollama", "run", "phi3.5", prompt]
-    result = subprocess.run(command, capture_output=True, text=True)
+    # Check for grammar issues using LanguageTool
+    matches = tool.check(text)
+    
+    # Split the text into words and calculate character ranges for each word
+    words = text.split()
+    word_ranges = []
+    current_offset = 0
 
-    print("STDOUT:", result.stdout)
-    print("STDERR:", result.stderr)
+    for word in words:
+        start_offset = current_offset
+        end_offset = start_offset + len(word)
+        word_ranges.append((start_offset, end_offset))
+        current_offset = end_offset + 1  # Account for space after each word
 
-    if result.returncode == 0:
-        output = result.stdout.strip()
-        print("Raw Output:", output)
+    # Prepare a list to store corrections
+    corrections = []
 
-        if output.startswith("failed to get console mode for stdout: The handle is invalid.\nfailed to get console mode for stderr: The handle is invalid.\n"):
-            return {"output": output.removeprefix("failed to get console mode for stdout: The handle is invalid.\nfailed to get console mode for stderr: The handle is invalid.\n")}
+    for match in matches:
+        # Extract information about the grammar issue
+        original_text = text[match.offset: match.offset + match.errorLength]
 
-        return {"response": output}
-    else:
-        return {"error": result.stderr.strip() or "Unknown error occurred."}        
+        # Find the word index using word_ranges
+        word_index = next((i for i, (start, end) in enumerate(word_ranges) if start <= match.offset < end),-1)
+
+        # Construct the correction object
+        correction = {
+            "word_index": word_index,  # Word-based index
+            "character_offset": match.offset,  # Character-based offset
+            "original_text": original_text,
+            "message": match.message,
+            "replacements": match.replacements or ["No suggestions"],  # Handle empty replacements
+        }
+
+        corrections.append(correction)
+
+    # Return the corrections in a structured format
+    return {
+        "original_text": text,
+        "corrections": corrections
+    }
 
 # @app.get("/other")
 # async def read_root():
