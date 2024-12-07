@@ -1,6 +1,7 @@
 
 fastapi 
 uvicorn
+python-dotenv
 
 # for huggingface
 transformers
@@ -8,6 +9,7 @@ torch
 protobuf
 sentencepiece
 
+# for gendered terms replacement
 spacy
 
 # for spell checking
