@@ -1,23 +1,21 @@
-
+# Main requirements for backend
 fastapi 
 uvicorn
 python-dotenv
 
 # for huggingface
-transformers
-torch
-protobuf
-sentencepiece
+# transformers
+# torch
+# protobuf
+# sentencepiece
 
 # for gendered terms replacement
 spacy
-
-# for spell checking
-textblob
+# python -m spacy download en_core_web_sm
 
 # for grammar checking
 language_tool_python
-
+ollama
 
 # pip install -r requirements.txt
 # uvicorn index:app --port 8080
