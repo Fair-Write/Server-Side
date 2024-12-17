@@ -229,196 +229,156 @@ async def generate(prompt: Prompt):
 @app.post("/grammar")
 async def generate(prompt: Prompt):
     text = prompt.prompt
+    # Analyze the text
     matches = tool.check(text)
 
-    # Split text into words and their character ranges
-    words, word_ranges = split_text_with_punctuation(text)
-
+    # Create a list for corrections
     corrections = []
-    revised_text = list(text)  # Convert text to a list for mutable character edits
-    offset_adjustment = 0  # Tracks changes in text length due to replacements
 
+    # Process each match to extract the necessary details
     for match in matches:
-        original_text = text[match.offset: match.offset + match.errorLength]
-        adjusted_offset = match.offset + offset_adjustment
-        word_index = get_word_index_from_offset(word_ranges, adjusted_offset)
-
-        # Apply the first suggested replacement (if available) to the revised text
-        if match.replacements:
-            replacement = match.replacements[0]
-            # Replace text while adjusting offsets
-            revised_text[adjusted_offset: adjusted_offset + match.errorLength] = list(replacement)
-            offset_adjustment += len(replacement) - match.errorLength
-
         corrections.append({
-            "word_index": word_index,  # Word-based index
-            "character_offset": match.offset,  # Original character offset in the text
-            "character_endset": match.offset + match.errorLength,  # Original character end offset in the text
-            "original_text": original_text,
+            "character_offset": match.offset,
+            "character_endset": match.offset + match.errorLength,
+            "original_text": text[match.offset:match.offset + match.errorLength],
             "message": match.message,
-            "replacements": match.replacements or [""],  # Handle empty suggestions
+            "category": match.category,
+            "rule_id": match.ruleId,
+            "replacements": match.replacements[:5]  # Only get the top 5 replacements
         })
 
-    revised_text_str = ''.join(revised_text)
-    if revised_text_str == text:
-        return {}
-    return {
+    # Generate revised text with corrections applied
+    revised_text = language_tool_python.utils.correct(text, matches)
+
+    # Construct the final result
+    result = {
         "original_text": text,
-        "revised_text": revised_text_str,  # Join the list to form the revised sentence
+        "revised_text": revised_text,
         "corrections": corrections
     }
 
-def split_text_with_punctuation(text):
-    words_with_punctuation = re.findall(r'\S+|\s|[.,!?;(){}\[\]":]', text)
-    
-    word_ranges = []
-    current_offset = 0
-    for word in words_with_punctuation:
-        start_offset = current_offset
-        end_offset = start_offset + len(word)
-        word_ranges.append((start_offset, end_offset))
-        current_offset = end_offset
-
-    return words_with_punctuation, word_ranges
-
-def get_word_index_from_offset(word_ranges, offset):
-    for i, (start, end) in enumerate(word_ranges):
-        if start <= offset < end:
-            return i
-    return -1  # Return -1 if no match is found, which shouldn't happen
+    return result
 
 @app.post("/gfl")
 async def generate(prompt: Prompt):
-    def load_gendered_terms(csv_filename): 
-
-        gendered_terms = {}
-        try:
-            with open(csv_filename, 'r') as csvfile:
-                reader = csv.reader(csvfile)
-                for row in reader:
-                    if len(row) >= 2:
-                        gendered_terms[row[0].lower()] = row[1]
-        except Exception as e:
-            raise ValueError(f"Error loading gendered terms from {csv_filename}: {e}")
-        return gendered_terms
-
-    def adjust_capitalization(original, replacement):
-        """Preserve capitalization of the original word/phrase in the replacement."""
-        if original.isupper():
-            return replacement.upper()
-        elif original.istitle():
-            return replacement.capitalize()
-        return replacement
-
-    def prioritize_terms(terms):
-        """Sort gendered terms by phrase length in descending order."""
-        return OrderedDict(
-            sorted(terms.items(), key=lambda item: len(item[0].split()))
-        )
-
-    def is_within_quotes(text, start, end):
-        """Check if the match is inside double quotes."""
-        # Find the closest quote before and after the match
-        before = text[:start]
-        after = text[end:]
-
-        # Check if there is an odd number of quotes before the match and after the match
-        return before.count('"') % 2 == 1 and after.count('"') % 2 == 1
-
-    def make_gender_fair(text, terms_csv='gendered_terms.csv'):
-        def load_gendered_terms(csv_filename): 
-            gendered_terms = {}
-            try:
-                with open(csv_filename, 'r') as csvfile:
-                    reader = csv.reader(csvfile)
-                    for row in reader:
-                        if len(row) >= 2:
-                            gendered_terms[row[0].lower()] = row[1]
-            except Exception as e:
-                raise ValueError(f"Error loading gendered terms from {csv_filename}: {e}")
-            return gendered_terms
-
-    def adjust_capitalization(original, replacement):
-        """Preserve capitalization of the original word/phrase in the replacement."""
-        if original.isupper():
-            return replacement.upper()
-        elif original.istitle():
-            return replacement.capitalize()
-        return replacement
-
-    def prioritize_terms(terms):
-        """Sort gendered terms by phrase length in descending order."""
-        return OrderedDict(
-            sorted(terms.items(), key=lambda item: len(item[0].split()))
-        )
-
-    def is_within_quotes(text, start, end):
-        """Check if the match is inside double quotes."""
-        # Find the closest quote before and after the match
-        before = text[:start]
-        after = text[end:]
-
-        # Check if there is an odd number of quotes before the match and after the match
-        return before.count('"') % 2 == 1 and after.count('"') % 2 == 1
-
-    def make_gender_fair(text, terms_csv='./src/gendered_terms.csv'):
-        """Replace gendered terms in the text with gender-neutral terms."""
-        # Load and prioritize gendered terms
-        gendered_terms = prioritize_terms(load_gendered_terms(terms_csv))
-
-        # Process text using spaCy for tokenization
+    # Load gender-fair language terms from a CSV file
+    def load_gfl_terms(csv_file):
+        gfl_dict = {}
+        with open(csv_file, mode='r', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            next(reader)  # Skip header
+            for row in reader:
+                gender_term, fair_term = row
+                gfl_dict[gender_term.lower()] = fair_term
+        return gfl_dict
+    
+    def gender_fair_revision(text, gfl_terms):
+        # Parse the text with SpaCy
         doc = nlp(text)
-
         revised_text = text
         corrections = []
 
-        # Replace exact matches (including hyphenated terms) using regex
-        for phrase, replacement in gendered_terms.items():
-            # Regex to match full word/phrase boundaries, case-insensitive
-            pattern = re.compile(rf'\b{re.escape(phrase)}\b', re.IGNORECASE)
+        # Words that indicate gender specificity
+        gender_indicators = {"lady", "male", "female", "boy", "girl"}
+        replaced_indices = set()  # Keep track of indices already replaced
 
-            # Find all matches and replace them one by one with correct capitalization
-            for match in pattern.finditer(revised_text):
-                original = match.group(0)  # The matched text
+        # Iterate over the tokens and replace gender terms
+        offset_correction = 0
+        inside_quotes = False
+        for i, token in enumerate(doc):
+            # Check for quote tokens to toggle inside_quotes flag
+            if token.text in ['"', "'"]:
+                inside_quotes = not inside_quotes
 
-                # Check if the match is inside double quotes
-                if is_within_quotes(revised_text, match.start(), match.end()):
-                    continue  # Skip if the match is inside quotes
+            if not inside_quotes:
+                # Check for gender indicators followed by nouns
+                if token.text.lower() in gender_indicators:
+                    if i + 1 < len(doc):  # Ensure there's a next word
+                        next_token = doc[i + 1]
+                        # Proceed only if the next word is a noun
+                        if next_token.pos_ in {"NOUN", "PROPN"}:  # NOUN = common noun, PROPN = proper noun
+                            original_text = f"{token.text} {next_token.text}"
+                            replacement = gfl_terms.get(next_token.text.lower(), next_token.text)
 
-                adjusted_replacement = adjust_capitalization(original, replacement)
+                            # Maintain capitalization for the second word
+                            if next_token.text.istitle():
+                                replacement = replacement.capitalize()
+                            elif next_token.text.isupper():
+                                replacement = replacement.upper()
 
-                # Replace text
-                revised_text = (
-                    revised_text[:match.start()] + 
-                    adjusted_replacement + 
-                    revised_text[match.end():]
-                )
+                            # Calculate offsets
+                            start = token.idx
+                            end = next_token.idx + len(next_token.text)
 
-                # Identify the word index by checking overlap with tokens
-                match_start = match.start()
-                match_end = match.end()
+                            # Adjust the revised text
+                            revised_text = (
+                                revised_text[:start + offset_correction]
+                                + replacement
+                                + revised_text[end + offset_correction:]
+                            )
 
-                word_index = None
-                for i, token in enumerate(doc):
-                    if token.idx <= match_start < token.idx + len(token):
-                        word_index = i
-                        break
+                            # Add correction details
+                            corrections.append({
+                                "original_text": original_text,
+                                "replacements": replacement,
+                                "character_offset": start,
+                                "character_endset": end,
+                                "original_character_endset": end
+                            })
 
-                # Track correction details with offsets
-                corrections.append({
-                    "word_index": word_index,
-                    "original_text": original,
-                    "replacements": adjusted_replacement,
-                    "character_offset": match.start(),
-                    "character_endset": match.end()
-                })
+                            # Adjust offset correction for the next replacement
+                            offset_correction += len(replacement) - len(original_text)
 
+                            # Mark indices as replaced
+                            replaced_indices.add(next_token.idx)
+                            continue  # Skip further checks for this token
+
+                # Single-word replacements
+                if token.idx not in replaced_indices and token.text.lower() in gfl_terms:
+                    original_text = token.text
+                    replacement = gfl_terms[original_text.lower()]
+
+                    # Maintain capitalization
+                    if original_text.istitle():
+                        replacement = replacement.capitalize()
+                    elif original_text.isupper():
+                        replacement = replacement.upper()
+
+                    # Calculate offsets
+                    start = token.idx
+                    end = start + len(original_text)
+
+                    # Adjust the revised text
+                    revised_text = (
+                        revised_text[:start + offset_correction]
+                        + replacement
+                        + revised_text[start + offset_correction + len(original_text):]
+                    )
+
+                    # Add correction details
+                    corrections.append({
+                        "original_text": original_text,
+                        "replacements": replacement,
+                        "character_offset": start,
+                        "character_endset": end,
+                        "original_character_endset": end
+                    })
+
+                    # Adjust offset correction for the next replacement
+                    offset_correction += len(replacement) - len(original_text)
+
+                    # Mark index as replaced
+                    replaced_indices.add(token.idx)
+
+        # Create the output JSON
         return {
             "original_text": text,
             "revised_text": revised_text,
             "corrections": corrections
         }
-    
-    text = prompt.prompt
-    return make_gender_fair(text) 
 
+    text = prompt.prompt
+    # text = """In times of emergency, firemen are the brave ones who risk their lives to save others, while policemen work tirelessly to enforce law and order; on our streets. These men are just naturally inclined towards such roles, given there physical strength and courage. Firemen and policemen undergo rigorous training that prepares them for the challenging situations they face everyday, showing that some jobs simply fit men better. Women might work as policewomen or lady firefighters, but its often a tough fit for them as compared to their male colleagues. In the business world, a successful businessman is admire for his ability to negotiate and lead a team effectively. Many companies prefer male chairmen since they are known for their decisiveness and strategic thinking. Even at lower levels, salesmen is often seen as more persuasive than their female counterparts, as people tend to trust men in these roles. Women on the other hand, usually pursue careers as secretaries or assistants, providing the vital support to their male bosses whom handle the main responsibilities.
+    # """
+    gfl_terms = load_gfl_terms("gendered_terms.csv")
+    return gender_fair_revision(text, gfl_terms) 
