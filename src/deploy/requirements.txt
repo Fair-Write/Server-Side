@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+language-tool-python
+spacy
+
+# pip install -r requirements.txt
+# python -m spacy download en_core_web_sm
+# uvicorn index:app --port 8080
