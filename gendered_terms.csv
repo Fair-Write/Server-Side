@@ -103,3 +103,21 @@
 "father","parent"
 "brother","sibling"
 "sister","sibling"
+"men", "people",
+"man","people",
+"women", "people",
+"womans", "people",
+"girl","child"
+"son","child"
+"daughter","child"
+"brothers","siblings"
+"boys","children"
+"girls","children"
+"mothers","parents"
+"fathers","parents"
+"brothers","siblings"
+"sons","children"
+"daughters","children"
+"girls","children"
+"boys","children"
+"male","people"
