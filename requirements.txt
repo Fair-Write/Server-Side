@@ -1,33 +1,18 @@
-# Main requirements for backend
-fastapi 
+fastapi
 uvicorn
-python-dotenv
-
-# for huggingface
-# transformers
-# torch
-# protobuf
-# sentencepiece
-
-# for gendered terms replacement
+pydantic
+language-tool-python
 spacy
-# python -m spacy download en_core_web_sm
-
-# for grammar checking
-language_tool_python
-ollama
 
 # pip install -r requirements.txt
-# uvicorn index:app --port 8080
+# python -m spacy download en_core_web_sm
+# uvicorn main:app --port 80
 
-
-# path of the model huggingface
-# C:\Users\pangilinan\.cache\huggingface\hub
-
-# for cpu
-# pip install 'transformers[torch]'
-
-
-# microsoft/Phi-3.5-mini-instruct
-# meta-llama/Llama-3.2-1B-Instruct
-
+# "he","they"
+# "him","them"
+# "his","their"
+# "he's","they're"
+# "she","they"
+# "her","their"
+# "hers","theirs"
+# "she's","they're"
