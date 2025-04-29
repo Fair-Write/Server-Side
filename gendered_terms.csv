@@ -131,4 +131,16 @@
 "wives","spouses"
 "husbands","spouses"
 "mothering","parenting"
-"fathering","parenting"
+"fathering","parenting",
+"mothered","parented"
+"fathered","parented",
+"mothering","parenting"
+"fathering","parenting",
+"ladies","people",
+"ladies'","people's"
+"ladies' room","restroom"
+"ladies room","restroom"
+"gentlemen's","people's"
+"gentlemen's room","restroom"
+"gentlemen room","restroom"
+"gentlemen","people"

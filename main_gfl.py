@@ -41,6 +41,10 @@ GENDER_PAIRS = {
     ("aunt", "uncle"): "relative",
     ("nephew", "niece"): "relative",
     ("niece", "nephew"): "relative",
+    ("ladies", "gentlemen"): "everyone",
+    ("gentlemen", "ladies"): "everyone",
+    ("ladies", "gentlemen"): "everyone",
+    ("gentlemen", "ladies"): "everyone"
 }
 
 nlp = spacy.load('en_core_web_sm')
@@ -109,29 +113,45 @@ class GenderFairLanguage:
     def _find_gender_pairs(self, text: str, doc) -> List[Dict]:
         """Find specific gender pairs to replace with more inclusive terms."""
         corrections = []
-
+        
         for (term1, term2), replacement in GENDER_PAIRS.items():
             # Handle both singular and plural forms
-            term1_variants = [term1, term1 + 's']
-            term2_variants = [term2, term2 + 's']
-
+            term1_variants = [term1, term1 + 's', term1 + 'es']  # Add 'es' for cases like 'wife' -> 'wives'
+            term2_variants = [term2, term2 + 's', term2 + 'es']
+            
             for t1 in term1_variants:
                 for t2 in term2_variants:
                     # Pattern for "term1 and term2" or "term1 or term2"
                     pattern = rf'\b({t1})\s+(and|or)\s+({t2})\b'
                     matches = list(re.finditer(pattern, text, re.IGNORECASE))
-
+                    
                     for match in reversed(matches):
                         if self._is_within_quotes(doc, match.start(), match.end()):
                             continue
                         
-                        # Determine replacement form (singular for "or", plural for "and")
-                        actual_replacement = replacement[:-1] if match.group(2) == "or" and not replacement.endswith('s') else replacement
-
+                        # Determine replacement form
+                        if match.group(2) == "or":
+                            # For "or" cases, use singular form if possible
+                            if replacement.endswith('s'):
+                                actual_replacement = replacement[:-1]  # Remove 's'
+                            elif replacement.endswith('es'):
+                                actual_replacement = replacement[:-2]  # Remove 'es'
+                            else:
+                                actual_replacement = replacement
+                        else:
+                            actual_replacement = replacement
+                        
+                        # Special cases for irregular plurals
+                        if actual_replacement == "childre":  # Fix for "children" -> "child"
+                            actual_replacement = "child"
+                        
                         # Determine capitalization from first word
                         first_word = match.group(1)
-                        adjusted_replacement = actual_replacement.capitalize() if first_word[0].isupper() else actual_replacement
-
+                        if first_word[0].isupper():
+                            adjusted_replacement = actual_replacement.capitalize()
+                        else:
+                            adjusted_replacement = actual_replacement.lower()
+                        
                         corrections.append({
                             "word_index": next((i for i, t in enumerate(doc) 
                                               if t.idx <= match.start() < t.idx + len(t.text)), None),
@@ -140,9 +160,9 @@ class GenderFairLanguage:
                             "character_offset": match.start(),
                             "character_endset": match.end()
                         })
-    
+        
         return corrections
-
+    
     def _find_redundant_pairs(self, text: str, doc) -> List[Dict]:
         """Find redundant gendered pairs with proper capitalization."""
         redundant_patterns = [
