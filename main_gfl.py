@@ -12,6 +12,14 @@ DEFAULT_PRONOUNS = {
 }
 
 GENDER_ADJECTIVES = {"male", "female", "lady", "gentlemen", "boy", "girl", "man", "woman"}
+GENDER_PAIRS = {
+    ("girl", "boy"): "children",
+    ("boy", "girl"): "children",
+    ("woman", "man"): "people",
+    ("man", "woman"): "people",
+    ("women", "men"): "people",
+    ("men", "women"): "people"
+}
 nlp = spacy.load('en_core_web_sm')
 
 class GenderFairLanguage:
@@ -55,6 +63,7 @@ class GenderFairLanguage:
         corrections = []
         
         # First collect all potential corrections without modifying text
+        corrections.extend(self._find_gender_pairs(text, doc))
         corrections.extend(self._find_redundant_pairs(text, doc))
         corrections.extend(self._find_adjective_noun_pairs(text, doc))
         corrections.extend(self._find_individual_terms(text, doc))
@@ -74,11 +83,39 @@ class GenderFairLanguage:
         
         return revised_text, corrections
 
+    def _find_gender_pairs(self, text: str, doc) -> List[Dict]:
+        """Find specific gender pairs to replace with more inclusive terms."""
+        corrections = []
+        
+        for (term1, term2), replacement in GENDER_PAIRS.items():
+            # Pattern for "term1 and term2" or "term1 or term2"
+            pattern = rf'\b({term1})\s+(and|or)\s+({term2})\b'
+            matches = list(re.finditer(pattern, text, re.IGNORECASE))
+            
+            for match in reversed(matches):
+                if self._is_within_quotes(doc, match.start(), match.end()):
+                    continue
+                
+                # Determine capitalization from first word
+                first_word = match.group(1)
+                adjusted_replacement = replacement.capitalize() if first_word[0].isupper() else replacement
+                
+                corrections.append({
+                    "word_index": next((i for i, t in enumerate(doc) 
+                                      if t.idx <= match.start() < t.idx + len(t.text)), None),
+                    "original_text": match.group(0),
+                    "replacements": adjusted_replacement,
+                    "character_offset": match.start(),
+                    "character_endset": match.end()
+                })
+        
+        return corrections
+
     def _find_redundant_pairs(self, text: str, doc) -> List[Dict]:
         """Find redundant gendered pairs with proper capitalization."""
         redundant_patterns = [
-            (r'\b([Gg]irl|[Bb]oy)\s+(and|or)\s+([Gg]irl|[Bb]oy)\b', 'child'),
-            (r'\b([Mm]an|[Ww]oman)\s+(and|or)\s+([Mm]an|[Ww]oman)\b', 'person'),
+            (r'\b([Gg]irls?|[Bb]oys?)\s+(and|or)\s+([Gg]irls?|[Bb]oys?)\b', 'children'),
+            (r'\b([Mm]en|[Ww]omen)\s+(and|or)\s+([Mm]en|[Ww]omen)\b', 'people'),
             (r'\b([Hh]e|[Ss]he)\s+(and|or)\s+([Hh]e|[Ss]he)\b', 'they')
         ]
         
@@ -163,15 +200,24 @@ class GenderFairLanguage:
         # First collect all person entities
         person_entities = [ent for ent in doc.ents if ent.label_ in ["PERSON", "ORG"]]
         
+        # Pronouns that are already gender-neutral and shouldn't be replaced
+        NEUTRAL_PRONOUNS = {"i", "me", "my", "mine", "myself",
+                            "we", "us", "our", "ours", "ourselves",
+                            "you", "your", "yours", "yourself", "yourselves",
+                            "they", "them", "their", "theirs", "themselves"}
+        
         for token in doc:
-            if token.tag_ in ["PRP", "PRP$"] and not self._is_within_quotes(doc, token.idx, token.idx + len(token.text)):
+            if (token.tag_ in ["PRP", "PRP$"] and 
+                token.text.lower() not in NEUTRAL_PRONOUNS and
+                not self._is_within_quotes(doc, token.idx, token.idx + len(token.text))):
+                
                 # Find most recent named entity that could be referent
                 referent = None
                 for ent in reversed(person_entities[:token.i]):
                     if ent.end <= token.i:  # Entity appears before pronoun
                         referent = ent.text
                         break
-                
+                    
                 # Determine pronoun role
                 if token.dep_ in ["nsubj", "nsubjpass"]:
                     role = "subject"
