@@ -107,7 +107,8 @@
 "man","people",
 "women", "people",
 "womans", "people",
-"girl","child"
+"girl","child","children","kid","youngster"
+"boy","child","children","kid","youngster"
 "son","child"
 "daughter","child"
 "brothers","siblings"
@@ -121,7 +122,6 @@
 "girls","children"
 "boys","children"
 "male","people"
-"boy","child"
 "boyfriend","partner"
 "girlfriend","partner"
 "boyfriends","partners"

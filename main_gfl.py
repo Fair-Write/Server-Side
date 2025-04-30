@@ -15,8 +15,8 @@ GENDER_ADJECTIVES = {"male", "female", "lady", "gentlemen", "boy", "girl", "man"
 GENDER_PAIRS = {
     ("girl", "boy"): "children",
     ("boy", "girl"): "children",
-    ("son", "daughter"): "children", 
-    ("daughter", "son"): "children",  
+    ("son", "daughter"): "children",
+    ("daughter", "son"): "children",
     ("woman", "man"): "people",
     ("man", "woman"): "people",
     ("women", "men"): "people",
@@ -42,8 +42,6 @@ GENDER_PAIRS = {
     ("nephew", "niece"): "relative",
     ("niece", "nephew"): "relative",
     ("ladies", "gentlemen"): "everyone",
-    ("gentlemen", "ladies"): "everyone",
-    ("ladies", "gentlemen"): "everyone",
     ("gentlemen", "ladies"): "everyone"
 }
 
@@ -54,14 +52,17 @@ class GenderFairLanguage:
         self.gendered_terms = self._load_and_prioritize_terms(terms_csv)
         
     def _load_and_prioritize_terms(self, csv_filename: str) -> OrderedDict:
-        """Load and prioritize gendered terms from CSV."""
-        gendered_terms = {}
+        """Load and prioritize gendered terms from CSV with multiple replacements."""
+        gendered_terms = OrderedDict()
         try:
             with open(csv_filename, 'r') as csvfile:
                 reader = csv.reader(csvfile)
                 for row in reader:
                     if len(row) >= 2:
-                        gendered_terms[row[0].lower()] = row[1]
+                        term = row[0].strip().lower()
+                        replacements = [repl.strip() for repl in row[1:] if repl.strip()]
+                        if term and replacements:
+                            gendered_terms[term] = replacements
         except Exception as e:
             raise ValueError(f"Error loading gendered terms: {e}")
             
@@ -79,32 +80,31 @@ class GenderFairLanguage:
         return replacement.lower()
 
     def _is_within_quotes(self, doc, start_idx: int, end_idx: int) -> bool:
-        """Check if text is within quotes using spaCy tokens."""
-        quotes_before = [t for t in doc[:start_idx] if t.text in ('"', "'")]
-        quotes_after = [t for t in doc[end_idx:] if t.text in ('"', "'")]
-        return (len(quotes_before) % 2 == 1) and (len(quotes_after) % 2 == 1)
+        """Check if text is within double quotes in the original text."""
+        text = doc.text
+        before = len(re.findall(r'(?<!\\)"', text[:start_idx]))
+        after = len(re.findall(r'(?<!\\)"', text[end_idx:]))
+        return (before % 2 == 1) and (after % 2 == 1)
 
     def _process_text_replacements(self, text: str, name_pronoun_map: Dict) -> Tuple[str, List[Dict]]:
         """Main text processing with accurate offset tracking."""
         doc = nlp(text)
         corrections = []
         
-        # First collect all potential corrections without modifying text
         corrections.extend(self._find_gender_pairs(text, doc))
         corrections.extend(self._find_redundant_pairs(text, doc))
         corrections.extend(self._find_adjective_noun_pairs(text, doc))
         corrections.extend(self._find_individual_terms(text, doc))
         corrections.extend(self._find_pronoun_replacements(text, doc, name_pronoun_map))
         
-        # Remove overlapping corrections, keeping the longest matches
         corrections = self._filter_overlapping_corrections(corrections)
         
-        # Apply corrections in reverse order
         revised_text = text
         for correction in sorted(corrections, key=lambda x: -x['character_offset']):
+            replacement_str = correction['replacements'][0]
             revised_text = (
                 revised_text[:correction['character_offset']] +
-                correction['replacements'] +
+                replacement_str +
                 revised_text[correction['character_endset']:]
             )
         
@@ -113,56 +113,38 @@ class GenderFairLanguage:
     def _find_gender_pairs(self, text: str, doc) -> List[Dict]:
         """Find specific gender pairs to replace with more inclusive terms."""
         corrections = []
-        
+
         for (term1, term2), replacement in GENDER_PAIRS.items():
-            # Handle both singular and plural forms
-            term1_variants = [term1, term1 + 's', term1 + 'es']  # Add 'es' for cases like 'wife' -> 'wives'
+            term1_variants = [term1, term1 + 's', term1 + 'es']
             term2_variants = [term2, term2 + 's', term2 + 'es']
-            
+
             for t1 in term1_variants:
                 for t2 in term2_variants:
-                    # Pattern for "term1 and term2" or "term1 or term2"
                     pattern = rf'\b({t1})\s+(and|or)\s+({t2})\b'
                     matches = list(re.finditer(pattern, text, re.IGNORECASE))
-                    
+
                     for match in reversed(matches):
                         if self._is_within_quotes(doc, match.start(), match.end()):
                             continue
                         
-                        # Determine replacement form
-                        if match.group(2) == "or":
-                            # For "or" cases, use singular form if possible
-                            if replacement.endswith('s'):
-                                actual_replacement = replacement[:-1]  # Remove 's'
-                            elif replacement.endswith('es'):
-                                actual_replacement = replacement[:-2]  # Remove 'es'
-                            else:
-                                actual_replacement = replacement
+                        if match.group(2).lower() == "or":
+                            actual_replacement = replacement[:-1] if replacement.endswith('s') else replacement[:-2] if replacement.endswith('es') else replacement
                         else:
                             actual_replacement = replacement
-                        
-                        # Special cases for irregular plurals
-                        if actual_replacement == "childre":  # Fix for "children" -> "child"
-                            actual_replacement = "child"
-                        
-                        # Determine capitalization from first word
+
                         first_word = match.group(1)
-                        if first_word[0].isupper():
-                            adjusted_replacement = actual_replacement.capitalize()
-                        else:
-                            adjusted_replacement = actual_replacement.lower()
-                        
+                        adjusted_replacement = self._adjust_capitalization(first_word, actual_replacement)
+
                         corrections.append({
-                            "word_index": next((i for i, t in enumerate(doc) 
-                                              if t.idx <= match.start() < t.idx + len(t.text)), None),
+                            "word_index": next((i for i, t in enumerate(doc) if t.idx <= match.start() < t.idx + len(t.text)), None),
                             "original_text": match.group(0),
-                            "replacements": adjusted_replacement,
+                            "replacements": [adjusted_replacement],
                             "character_offset": match.start(),
                             "character_endset": match.end()
                         })
-        
+
         return corrections
-    
+
     def _find_redundant_pairs(self, text: str, doc) -> List[Dict]:
         """Find redundant gendered pairs with proper capitalization."""
         redundant_patterns = [
@@ -170,7 +152,6 @@ class GenderFairLanguage:
             (r'\b([Mm]en|[Ww]omen)\s+(and|or)\s+([Mm]en|[Ww]omen)\b', 'people'),
             (r'\b([Hh]e|[Ss]he)\s+(and|or)\s+([Hh]e|[Ss]he)\b', 'they')
         ]
-        
         corrections = []
         
         for pattern, replacement in redundant_patterns:
@@ -179,15 +160,13 @@ class GenderFairLanguage:
                 if self._is_within_quotes(doc, match.start(), match.end()):
                     continue
                 
-                # Determine capitalization from first word
                 first_word = match.group(1)
-                adjusted_replacement = replacement.capitalize() if first_word[0].isupper() else replacement
+                adjusted = replacement.capitalize() if first_word[0].isupper() else replacement
                 
                 corrections.append({
-                    "word_index": next((i for i, t in enumerate(doc) 
-                                      if t.idx <= match.start() < t.idx + len(t.text)), None),
+                    "word_index": next((i for i, t in enumerate(doc) if t.idx <= match.start() < t.idx + len(t.text)), None),
                     "original_text": match.group(0),
-                    "replacements": adjusted_replacement,
+                    "replacements": [adjusted],
                     "character_offset": match.start(),
                     "character_endset": match.end()
                 })
@@ -206,13 +185,13 @@ class GenderFairLanguage:
                 next_token.pos_ == "NOUN" and
                 not self._is_within_quotes(doc, token.idx, next_token.idx + len(next_token.text))):
                 
-                noun_replacement = self.gendered_terms.get(next_token.text.lower(), next_token.text)
-                replacement = self._adjust_capitalization(next_token.text, noun_replacement)
+                noun_replacements = self.gendered_terms.get(next_token.text.lower(), [next_token.text])
+                adjusted_replacements = [self._adjust_capitalization(next_token.text, repl) for repl in noun_replacements]
                 
                 corrections.append({
                     "word_index": i,
                     "original_text": f"{token.text} {next_token.text}",
-                    "replacements": replacement,
+                    "replacements": adjusted_replacements,
                     "character_offset": token.idx,
                     "character_endset": next_token.idx + len(next_token.text)
                 })
@@ -223,21 +202,21 @@ class GenderFairLanguage:
         """Find individual gendered terms."""
         corrections = []
         
-        for term, replacement in self.gendered_terms.items():
-            if ' ' in term:  # Skip multi-word terms (handled elsewhere)
+        for term, replacements_list in self.gendered_terms.items():
+            if ' ' in term:
                 continue
-                
-            matches = list(re.finditer(rf'\b{re.escape(term)}\b', text, re.IGNORECASE))
-            for match in reversed(matches):
+            
+            for match in reversed(list(re.finditer(rf'\b{re.escape(term)}\b', text, re.IGNORECASE))):
                 if self._is_within_quotes(doc, match.start(), match.end()):
                     continue
                 
-                adjusted = self._adjust_capitalization(match.group(0), replacement)
+                original_text = match.group(0)
+                adjusted_replacements = [self._adjust_capitalization(original_text, repl) for repl in replacements_list]
+                
                 corrections.append({
-                    "word_index": next((i for i, t in enumerate(doc) 
-                                      if t.idx <= match.start() < t.idx + len(t.text)), None),
-                    "original_text": match.group(0),
-                    "replacements": adjusted,
+                    "word_index": next((i for i, t in enumerate(doc) if t.idx <= match.start() < t.idx + len(t.text)), None),
+                    "original_text": original_text,
+                    "replacements": adjusted_replacements,
                     "character_offset": match.start(),
                     "character_endset": match.end()
                 })
@@ -249,28 +228,23 @@ class GenderFairLanguage:
         corrections = []
         name_to_category = {name.lower(): category for name, category in (name_pronoun_map or {}).items()}
 
-        # First collect all person entities
         person_entities = [ent for ent in doc.ents if ent.label_ in ["PERSON", "ORG"]]
-
-        # Pronouns that are already gender-neutral and shouldn't be replaced
         NEUTRAL_PRONOUNS = {"i", "me", "my", "mine", "myself",
                             "we", "us", "our", "ours", "ourselves",
                             "you", "your", "yours", "yourself", "yourselves",
-                            "they", "them", "their", "theirs", "themselves"}
+                            "they", "them", "their", "theirs", "themselves", "it", "its", "itself"}
 
         for token in doc:
             if (token.tag_ in ["PRP", "PRP$"] and 
                 token.text.lower() not in NEUTRAL_PRONOUNS and
                 not self._is_within_quotes(doc, token.idx, token.idx + len(token.text))):
 
-                # Find most recent named entity that could be referent
                 referent = None
                 for ent in reversed(person_entities[:token.i]):
-                    if ent.end <= token.i:  # Entity appears before pronoun
+                    if ent.end <= token.i:
                         referent = ent.text
                         break
-                    
-                # Determine pronoun role
+                
                 if token.dep_ in ["nsubj", "nsubjpass"]:
                     role = "subject"
                 elif token.dep_ in ["dobj", "iobj", "pobj"]:
@@ -282,15 +256,12 @@ class GenderFairLanguage:
                 else:
                     continue
                 
-                # Use specified pronoun if referent is in name_pronoun_map,
-                # otherwise default to gender-fair
                 if referent and referent.lower() in name_to_category:
                     category = name_to_category[referent.lower()]
                     new_pronoun = DEFAULT_PRONOUNS[category][role]
                 else:
                     new_pronoun = DEFAULT_PRONOUNS["gender_fair"][role]
 
-                # Preserve original capitalization
                 if token.text.istitle():
                     new_pronoun = new_pronoun.capitalize()
                 elif token.text.isupper():
@@ -300,7 +271,7 @@ class GenderFairLanguage:
                     corrections.append({
                         "word_index": token.i,
                         "original_text": token.text,
-                        "replacements": new_pronoun,
+                        "replacements": [new_pronoun],
                         "character_offset": token.idx,
                         "character_endset": token.idx + len(token.text)
                     })
@@ -312,16 +283,14 @@ class GenderFairLanguage:
         if not corrections:
             return []
             
-        # Sort by start position then by length (longest first)
         sorted_corrections = sorted(corrections, key=lambda x: (x['character_offset'], -x['character_endset']))
-        
         filtered = []
         last_end = -1
         
-        for correction in sorted_corrections:
-            if correction['character_offset'] >= last_end:
-                filtered.append(correction)
-                last_end = correction['character_endset']
+        for c in sorted_corrections:
+            if c['character_offset'] >= last_end:
+                filtered.append(c)
+                last_end = c['character_endset']
         
         return filtered
 
@@ -335,12 +304,10 @@ class GenderFairLanguage:
         return {
             "original_text": text,
             "revised_text": revised_text,
-            "corrections": sorted(
-                [c for c in corrections if c['character_offset'] >= 0],
-                key=lambda x: x['character_offset']
-            )
+            "corrections": sorted([
+                c for c in corrections if c['character_offset'] >= 0
+            ], key=lambda x: x['character_offset'])
         }
 
-# Export
 def load_gfl(csv_path: str = 'gendered_terms.csv') -> GenderFairLanguage:
     return GenderFairLanguage(csv_path)
