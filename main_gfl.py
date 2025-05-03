@@ -72,28 +72,66 @@ class GenderFairLanguage:
         return (before % 2 == 1) and (after % 2 == 1)
 
     def _process_text_replacements(self, text: str, name_pronoun_map: Dict) -> Tuple[str, List[Dict]]:
-            """Main text processing with accurate offset tracking."""
-            doc = nlp(text)
-            corrections = []
+        """Main text processing with enhanced title detection."""
+        doc = nlp(text)
+        
+        # Enhanced title detection in token stream
+        title_mapping = {'mr': 'male', 'ms': 'female', 'mx': 'gender_fair'}
+        i = 0
+        while i < len(doc):
+            token = doc[i]
+            # Look for titles with optional period and proper noun following
+            base_title = token.text.lower().rstrip('.')
+            if base_title in title_mapping:
+                # Find all consecutive proper nouns after title
+                name_parts = [token.text]
+                j = i + 1
+                while j < len(doc) and (doc[j].pos_ == 'PROPN' or doc[j].text in ['-']):
+                    name_parts.append(doc[j].text)
+                    j += 1
+                
+                if len(name_parts) > 1:  # Found at least title + 1 name part
+                    # Map full name and name without title
+                    full_name = ' '.join(name_parts).lower()
+                    category = title_mapping[base_title]
+                    name_pronoun_map[full_name] = category
+                    
+                    # Add name without title (multiple name parts)
+                    name_without_title = ' '.join(name_parts[1:]).lower()
+                    name_pronoun_map[name_without_title] = category
+                    
+                    # Skip processed tokens
+                    i = j - 1
+            i += 1
 
-            corrections.extend(self._find_gender_pairs(text, doc))
-            corrections.extend(self._find_adjective_noun_pairs(text, doc))
-            corrections.extend(self._find_individual_terms(text, doc))
-            corrections.extend(self._find_pronoun_replacements(text, doc, name_pronoun_map))
+        # Original entity-based processing (supplements token-based detection)
+        for ent in doc.ents:
+            if ent.label_ == 'PERSON':
+                parts = ent.text.strip().split()
+                if parts:
+                    base_title = parts[0].lower().rstrip('.')
+                    if base_title in title_mapping:
+                        full_name = ent.text.strip().lower()
+                        name_pronoun_map[full_name] = title_mapping[base_title]
 
-            corrections = self._filter_overlapping_corrections(corrections)
+        # Rest of processing remains the same
+        corrections = []
+        corrections.extend(self._find_gender_pairs(text, doc))
+        corrections.extend(self._find_adjective_noun_pairs(text, doc))
+        corrections.extend(self._find_individual_terms(text, doc))
+        corrections.extend(self._find_pronoun_replacements(text, doc, name_pronoun_map))
+        corrections = self._filter_overlapping_corrections(corrections)
 
-            revised_text = text
-            for correction in sorted(corrections, key=lambda x: -x['character_offset']):
-                # Use the first replacement for the actual text modification
-                replacement_str = correction['replacements'][0]
-                revised_text = (
-                    revised_text[:correction['character_offset']] +
-                    replacement_str +
-                    revised_text[correction['character_endset']:]
-                )
-
-            return revised_text, corrections
+        revised_text = text
+        for correction in sorted(corrections, key=lambda x: -x['character_offset']):
+            replacement_str = correction['replacements'][0]
+            revised_text = (
+                revised_text[:correction['character_offset']] +
+                replacement_str +
+                revised_text[correction['character_endset']:]
+            )
+        
+        return revised_text, corrections
 
     def _find_gender_pairs(self, text: str, doc) -> List[Dict]:
         """Find specific gender pairs to replace with more inclusive terms."""
