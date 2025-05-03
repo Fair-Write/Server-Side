@@ -13,36 +13,21 @@ DEFAULT_PRONOUNS = {
 
 GENDER_ADJECTIVES = {"male", "female", "lady", "gentlemen", "boy", "girl", "man", "woman"}
 GENDER_PAIRS = {
-    ("girl", "boy"): "children",
-    ("boy", "girl"): "children",
-    ("son", "daughter"): "children",
-    ("daughter", "son"): "children",
-    ("woman", "man"): "people",
-    ("man", "woman"): "people",
-    ("women", "men"): "people",
-    ("men", "women"): "people",
-    ("he", "she"): "they",
-    ("she", "he"): "they",
-    ("his", "her"): "their",
-    ("her", "his"): "their",
-    ("him", "her"): "them",
-    ("her", "him"): "them",
-    ("himself", "herself"): "themselves",
-    ("herself", "himself"): "themselves",
-    ("husband", "wife"): "spouse",
-    ("wife", "husband"): "spouse",
-    ("boyfriend", "girlfriend"): "partner",
-    ("girlfriend", "boyfriend"): "partner",
-    ("brother", "sister"): "sibling",
-    ("sister", "brother"): "sibling",
-    ("father", "mother"): "parent",
-    ("mother", "father"): "parent",
-    ("uncle", "aunt"): "relative",
-    ("aunt", "uncle"): "relative",
-    ("nephew", "niece"): "relative",
-    ("niece", "nephew"): "relative",
-    ("ladies", "gentlemen"): "everyone",
-    ("gentlemen", "ladies"): "everyone"
+    ("girl", "boy"): ["children", "kids", "students", "youth", "young people"],
+    ("son", "daughter"): ["children", "kids", "offspring"],
+    ("woman", "man"): ["people", "individuals", "persons"],
+    ("women", "men"): ["people", "individuals", "persons"],
+    ("he", "she"): ["they"],
+    ("his", "her"): ["their"],
+    ("him", "her"): ["them"],
+    ("himself", "herself"): ["themselves"],
+    ("husband", "wife"): ["spouse", "partner"],
+    ("boyfriend", "girlfriend"): ["partner"],
+    ("brother", "sister"): ["sibling"],
+    ("father", "mother"): ["parent"],
+    ("uncle", "aunt"): ["relative"],
+    ("nephew", "niece"): ["relative"],
+    ("ladies", "gentlemen"): ["everyone", "all"]
 }
 
 nlp = spacy.load('en_core_web_sm')
@@ -87,91 +72,79 @@ class GenderFairLanguage:
         return (before % 2 == 1) and (after % 2 == 1)
 
     def _process_text_replacements(self, text: str, name_pronoun_map: Dict) -> Tuple[str, List[Dict]]:
-        """Main text processing with accurate offset tracking."""
-        doc = nlp(text)
-        corrections = []
-        
-        corrections.extend(self._find_gender_pairs(text, doc))
-        corrections.extend(self._find_redundant_pairs(text, doc))
-        corrections.extend(self._find_adjective_noun_pairs(text, doc))
-        corrections.extend(self._find_individual_terms(text, doc))
-        corrections.extend(self._find_pronoun_replacements(text, doc, name_pronoun_map))
-        
-        corrections = self._filter_overlapping_corrections(corrections)
-        
-        revised_text = text
-        for correction in sorted(corrections, key=lambda x: -x['character_offset']):
-            replacement_str = correction['replacements'][0]
-            revised_text = (
-                revised_text[:correction['character_offset']] +
-                replacement_str +
-                revised_text[correction['character_endset']:]
-            )
-        
-        return revised_text, corrections
+            """Main text processing with accurate offset tracking."""
+            doc = nlp(text)
+            corrections = []
+
+            corrections.extend(self._find_gender_pairs(text, doc))
+            corrections.extend(self._find_adjective_noun_pairs(text, doc))
+            corrections.extend(self._find_individual_terms(text, doc))
+            corrections.extend(self._find_pronoun_replacements(text, doc, name_pronoun_map))
+
+            corrections = self._filter_overlapping_corrections(corrections)
+
+            revised_text = text
+            for correction in sorted(corrections, key=lambda x: -x['character_offset']):
+                # Use the first replacement for the actual text modification
+                replacement_str = correction['replacements'][0]
+                revised_text = (
+                    revised_text[:correction['character_offset']] +
+                    replacement_str +
+                    revised_text[correction['character_endset']:]
+                )
+
+            return revised_text, corrections
 
     def _find_gender_pairs(self, text: str, doc) -> List[Dict]:
         """Find specific gender pairs to replace with more inclusive terms."""
         corrections = []
 
-        for (term1, term2), replacement in GENDER_PAIRS.items():
-            term1_variants = [term1, term1 + 's', term1 + 'es']
-            term2_variants = [term2, term2 + 's', term2 + 'es']
+        for (term1, term2), replacements in GENDER_PAIRS.items():
+            for t1, t2 in [(term1, term2), (term2, term1)]:
+                term1_variants = [t1, t1 + 's', t1 + 'es']
+                term2_variants = [t2, t2 + 's', t2 + 'es']
 
-            for t1 in term1_variants:
-                for t2 in term2_variants:
-                    pattern = rf'\b({t1})\s+(and|or)\s+({t2})\b'
-                    matches = list(re.finditer(pattern, text, re.IGNORECASE))
+                for v1 in term1_variants:
+                    for v2 in term2_variants:
+                        pattern = rf'\b({v1})\s+(and|or)\s+({v2})\b'
+                        matches = list(re.finditer(pattern, text, re.IGNORECASE))
 
-                    for match in reversed(matches):
-                        if self._is_within_quotes(doc, match.start(), match.end()):
-                            continue
-                        
-                        if match.group(2).lower() == "or":
-                            actual_replacement = replacement[:-1] if replacement.endswith('s') else replacement[:-2] if replacement.endswith('es') else replacement
-                        else:
-                            actual_replacement = replacement
+                        for match in reversed(matches):
+                            if self._is_within_quotes(doc, match.start(), match.end()):
+                                continue
 
-                        first_word = match.group(1)
-                        adjusted_replacement = self._adjust_capitalization(first_word, actual_replacement)
+                            is_or = match.group(2).lower() == "or"
 
-                        corrections.append({
-                            "word_index": next((i for i, t in enumerate(doc) if t.idx <= match.start() < t.idx + len(t.text)), None),
-                            "original_text": match.group(0),
-                            "replacements": [adjusted_replacement],
-                            "character_offset": match.start(),
-                            "character_endset": match.end()
-                        })
+                            # Handle singular/plural for "or" cases
+                            if is_or:
+                                adjusted_replacements = []
+                                for repl in replacements:
+                                    if repl.endswith('s'):
+                                        adjusted = repl[:-1]  # children -> child
+                                    elif repl.endswith('es'):
+                                        adjusted = repl[:-2]  # ladies -> lady
+                                    else:
+                                        adjusted = repl
+                                    adjusted_replacements.append(adjusted)
+                            else:
+                                adjusted_replacements = replacements
+
+                            first_word = match.group(1)
+                            adjusted_replacements = [
+                                self._adjust_capitalization(first_word, repl)
+                                for repl in adjusted_replacements
+                            ]
+
+                            corrections.append({
+                                "word_index": next((i for i, t in enumerate(doc) if t.idx <= match.start() < t.idx + len(t.text)), None),
+                                "original_text": match.group(0),
+                                "replacements": adjusted_replacements,
+                                "character_offset": match.start(),
+                                "character_endset": match.end()
+                            })
 
         return corrections
 
-    def _find_redundant_pairs(self, text: str, doc) -> List[Dict]:
-        """Find redundant gendered pairs with proper capitalization."""
-        redundant_patterns = [
-            (r'\b([Gg]irls?|[Bb]oys?)\s+(and|or)\s+([Gg]irls?|[Bb]oys?)\b', 'children'),
-            (r'\b([Mm]en|[Ww]omen)\s+(and|or)\s+([Mm]en|[Ww]omen)\b', 'people'),
-            (r'\b([Hh]e|[Ss]he)\s+(and|or)\s+([Hh]e|[Ss]he)\b', 'they')
-        ]
-        corrections = []
-        
-        for pattern, replacement in redundant_patterns:
-            matches = list(re.finditer(pattern, text))
-            for match in reversed(matches):
-                if self._is_within_quotes(doc, match.start(), match.end()):
-                    continue
-                
-                first_word = match.group(1)
-                adjusted = replacement.capitalize() if first_word[0].isupper() else replacement
-                
-                corrections.append({
-                    "word_index": next((i for i, t in enumerate(doc) if t.idx <= match.start() < t.idx + len(t.text)), None),
-                    "original_text": match.group(0),
-                    "replacements": [adjusted],
-                    "character_offset": match.start(),
-                    "character_endset": match.end()
-                })
-        
-        return corrections
 
     def _find_adjective_noun_pairs(self, text: str, doc) -> List[Dict]:
         """Find gender adjective-noun pairs."""
