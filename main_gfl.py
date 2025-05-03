@@ -76,7 +76,7 @@ class GenderFairLanguage:
         doc = nlp(text)
         
         # Enhanced title detection in token stream
-        title_mapping = {'mr': 'male', 'ms': 'female', 'mx': 'gender_fair'}
+        title_mapping = {'mr': 'male', 'ms': 'female',"mrs": "female" ,'mx': 'gender_fair'}
         i = 0
         while i < len(doc):
             token = doc[i]
