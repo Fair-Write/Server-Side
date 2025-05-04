@@ -72,49 +72,59 @@ class GenderFairLanguage:
         return (before % 2 == 1) and (after % 2 == 1)
 
     def _process_text_replacements(self, text: str, name_pronoun_map: Dict) -> Tuple[str, List[Dict]]:
-        """Main text processing with enhanced title detection."""
+        """Main text processing with hyphen-aware name handling."""
         doc = nlp(text)
-        
-        # Enhanced title detection in token stream
-        title_mapping = {'mr': 'male', 'ms': 'female',"mrs": "female" ,'mx': 'gender_fair'}
+        # Enhanced title detection with hyphen handling
+
+        TITLE_MAPPING = {
+                        'mr': 'male',
+                        'ms': 'female', 
+                        'mrs': 'female', 
+                        'mx': 'gender_fair',
+                        'sir': 'male',
+                        'madam': "female",
+                         }
         i = 0
         while i < len(doc):
             token = doc[i]
-            # Look for titles with optional period and proper noun following
             base_title = token.text.lower().rstrip('.')
-            if base_title in title_mapping:
-                # Find all consecutive proper nouns after title
+
+            if base_title in TITLE_MAPPING:
                 name_parts = [token.text]
                 j = i + 1
-                while j < len(doc) and (doc[j].pos_ == 'PROPN' or doc[j].text in ['-']):
-                    name_parts.append(doc[j].text)
+                hyphen_buffer = None  # Track hyphens for merging
+
+                while j < len(doc):
+                    current_token = doc[j]
+                    current_text = current_token.text
+
+                    # Handle hyphen merging
+                    if current_text == '-':
+                        hyphen_buffer = current_text
+                    elif hyphen_buffer and current_token.pos_ == 'PROPN':
+                        # Merge hyphen with next word
+                        name_parts.append(hyphen_buffer + current_text)
+                        hyphen_buffer = None
+                    elif current_token.pos_ == 'PROPN' or (current_text in ['-'] and not hyphen_buffer):
+                        name_parts.append(current_text)
+                    else:
+                        break
+                    
                     j += 1
-                
-                if len(name_parts) > 1:  # Found at least title + 1 name part
-                    # Map full name and name without title
-                    full_name = ' '.join(name_parts).lower()
-                    category = title_mapping[base_title]
-                    name_pronoun_map[full_name] = category
-                    
-                    # Add name without title (multiple name parts)
-                    name_without_title = ' '.join(name_parts[1:]).lower()
-                    name_pronoun_map[name_without_title] = category
-                    
-                    # Skip processed tokens
-                    i = j - 1
+
+                if len(name_parts) > 1:
+                    # Clean and normalize names
+                    full_name = self._normalize_hyphenated_name(' '.join(name_parts))
+                    name_without_title = self._normalize_hyphenated_name(' '.join(name_parts[1:]))
+
+                    category = TITLE_MAPPING[base_title]
+                    name_pronoun_map[full_name.lower()] = category
+                    name_pronoun_map[name_without_title.lower()] = category
+
+                i = j - 1  # Skip processed tokens
             i += 1
 
-        # Original entity-based processing (supplements token-based detection)
-        for ent in doc.ents:
-            if ent.label_ == 'PERSON':
-                parts = ent.text.strip().split()
-                if parts:
-                    base_title = parts[0].lower().rstrip('.')
-                    if base_title in title_mapping:
-                        full_name = ent.text.strip().lower()
-                        name_pronoun_map[full_name] = title_mapping[base_title]
-
-        # Rest of processing remains the same
+        # Rest of processing remains
         corrections = []
         corrections.extend(self._find_gender_pairs(text, doc))
         corrections.extend(self._find_adjective_noun_pairs(text, doc))
@@ -125,20 +135,105 @@ class GenderFairLanguage:
         revised_text = text
         for correction in sorted(corrections, key=lambda x: -x['character_offset']):
             replacement_str = correction['replacements'][0]
-            revised_text = (
-                revised_text[:correction['character_offset']] +
-                replacement_str +
-                revised_text[correction['character_endset']:]
-            )
-        
+            revised_text = revised_text[:correction['character_offset']] + replacement_str + revised_text[correction['character_endset']:]
+
         return revised_text, corrections
+
+    @staticmethod
+    def _normalize_hyphenated_name(name: str) -> str:
+        """Merge hyphen patterns into proper hyphenated format."""
+        return re.sub(r'\s*-\s*', '-', name).strip()
+
+    def _find_pronoun_replacements(self, text: str, doc, name_pronoun_map: Dict) -> List[Dict]:
+        """Pronoun resolution with enhanced name tracking."""
+        corrections = []
+        name_to_category = {name.lower(): category for name, category in name_pronoun_map.items()}
+        processed_names = set(name_to_category.keys())
+
+        # Track all name variants from titles
+        name_variants = []
+        for name in processed_names:
+            name_variants.extend([
+                name,
+                name.replace('-', ' '),  # "adam-silver" -> "adam silver"
+                name.replace(' ', '-')    # "adam silver" -> "adam-silver"
+            ])
+
+        NEUTRAL_PRONOUNS = {"i", "me", "my", "mine", "myself",
+                            "we", "us", "our", "ours", "ourselves",
+                            "you", "your", "yours", "yourself", "yourselves",
+                            "they", "them", "their", "theirs", "themselves", "it", "its", "itself"}
+
+        for token in doc:
+            if (token.tag_ in ["PRP", "PRP$"] and 
+                token.text.lower() not in NEUTRAL_PRONOUNS and
+                not self._is_within_quotes(doc, token.idx, token.idx + len(token.text))):
+
+                # Find closest matching name in previous context
+                referent = None
+                lookback_window = doc[max(0, token.i-10):token.i]  # 10 tokens back
+                for prev_token in reversed(lookback_window):
+                    if prev_token.pos_ == 'PROPN':
+                        candidate = self._normalize_hyphenated_name(prev_token.text).lower()
+                        if candidate in processed_names:
+                            referent = candidate
+                            break
+                        # Check space/hyphen variants
+                        for variant in [candidate, candidate.replace('-', ' ')]:
+                            if variant in name_to_category:
+                                referent = variant
+                                break
+                        if referent:
+                            break
+
+                # Fallback to entity resolution
+                if not referent:
+                    for ent in reversed(doc.ents):
+                        if ent.end <= token.i and ent.label_ in ["PERSON", "ORG"]:
+                            candidate = self._normalize_hyphenated_name(ent.text).lower()
+                            if candidate in processed_names:
+                                referent = candidate
+                                break
+
+                # Determine pronoun role and replacement
+                if referent:
+                    category = name_to_category[referent]
+                    role = self._get_pronoun_role(token)
+                    new_pronoun = DEFAULT_PRONOUNS[category][role]
+                else:
+                    new_pronoun = DEFAULT_PRONOUNS["gender_fair"][self._get_pronoun_role(token)]
+
+                # Apply capitalization and replacement
+                new_pronoun = self._adjust_capitalization(token.text, new_pronoun)
+                if new_pronoun != token.text:
+                    corrections.append({
+                        "word_index": token.i,
+                        "original_text": token.text,
+                        "replacements": [new_pronoun],
+                        "character_offset": token.idx,
+                        "character_endset": token.idx + len(token.text)
+                    })
+
+        return corrections
+
+    def _get_pronoun_role(self, token) -> str:
+        """Determine pronoun grammatical role."""
+        if token.dep_ in ["nsubj", "nsubjpass"]:
+            return "subject"
+        if token.dep_ in ["dobj", "iobj", "pobj"]:
+            return "object"
+        if token.dep_ == "poss" or token.tag_ == "PRP$":
+            return "possessive"
+        if token.dep_ == "reflexive":
+            return "reflexive"
+        return "subject"  # Default fallback
 
     def _find_gender_pairs(self, text: str, doc) -> List[Dict]:
         """Find specific gender pairs to replace with more inclusive terms."""
         corrections = []
 
         for (term1, term2), replacements in GENDER_PAIRS.items():
-            for t1, t2 in [(term1, term2), (term2, term1)]:
+             for t1, t2 in [(term1, term2), (term2, term1)]:
                 term1_variants = [t1, t1 + 's', t1 + 'es']
                 term2_variants = [t2, t2 + 's', t2 + 'es']
 
