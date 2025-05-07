@@ -11,7 +11,7 @@ DEFAULT_PRONOUNS = {
     "gender_fair": {"subject": "they", "object": "them", "possessive": "their", "reflexive": "themselves"}
 }
 
-GENDER_ADJECTIVES = {"male", "female", "lady", "gentlemen", "boy", "girl", "man", "woman"}
+GENDER_ADJECTIVES = {"male", "female", "lady", "gentlemen", "boy", "girl", "man", "woman", "ladies", }
 GENDER_PAIRS = {
     ("girl", "boy"): ["children", "kids", "students", "youth", "young people"],
     ("son", "daughter"): ["children", "kids", "offspring"],
@@ -37,7 +37,6 @@ class GenderFairLanguage:
         self.gendered_terms = self._load_and_prioritize_terms(terms_csv)
         
     def _load_and_prioritize_terms(self, csv_filename: str) -> OrderedDict:
-        """Load and prioritize gendered terms from CSV with multiple replacements."""
         gendered_terms = OrderedDict()
         try:
             with open(csv_filename, 'r') as csvfile:
@@ -57,7 +56,6 @@ class GenderFairLanguage:
 
     @staticmethod
     def _adjust_capitalization(original: str, replacement: str) -> str:
-        """Preserve capitalization patterns in replacements."""
         if original.isupper():
             return replacement.upper()
         elif original.istitle():
@@ -65,17 +63,13 @@ class GenderFairLanguage:
         return replacement.lower()
 
     def _is_within_quotes(self, doc, start_idx: int, end_idx: int) -> bool:
-        """Check if text is within double quotes in the original text."""
         text = doc.text
         before = len(re.findall(r'(?<!\\)"', text[:start_idx]))
         after = len(re.findall(r'(?<!\\)"', text[end_idx:]))
         return (before % 2 == 1) and (after % 2 == 1)
 
     def _process_text_replacements(self, text: str, name_pronoun_map: Dict) -> Tuple[str, List[Dict]]:
-        """Main text processing with hyphen-aware name handling."""
         doc = nlp(text)
-        # Enhanced title detection with hyphen handling
-
         TITLE_MAPPING = {
                         'mr': 'male',
                         'ms': 'female', 
@@ -130,6 +124,7 @@ class GenderFairLanguage:
         corrections.extend(self._find_adjective_noun_pairs(text, doc))
         corrections.extend(self._find_individual_terms(text, doc))
         corrections.extend(self._find_pronoun_replacements(text, doc, name_pronoun_map))
+        corrections.extend(self._find_possessive_constructions(text, doc)) 
         corrections = self._filter_overlapping_corrections(corrections)
 
         revised_text = text
@@ -141,11 +136,9 @@ class GenderFairLanguage:
 
     @staticmethod
     def _normalize_hyphenated_name(name: str) -> str:
-        """Merge hyphen patterns into proper hyphenated format."""
         return re.sub(r'\s*-\s*', '-', name).strip()
 
     def _find_pronoun_replacements(self, text: str, doc, name_pronoun_map: Dict) -> List[Dict]:
-        """Pronoun resolution with enhanced name tracking."""
         corrections = []
         name_to_category = {name.lower(): category for name, category in name_pronoun_map.items()}
         processed_names = set(name_to_category.keys())
@@ -178,7 +171,6 @@ class GenderFairLanguage:
                         if candidate in processed_names:
                             referent = candidate
                             break
-                        # Check space/hyphen variants
                         for variant in [candidate, candidate.replace('-', ' ')]:
                             if variant in name_to_category:
                                 referent = variant
@@ -186,7 +178,6 @@ class GenderFairLanguage:
                         if referent:
                             break
 
-                # Fallback to entity resolution
                 if not referent:
                     for ent in reversed(doc.ents):
                         if ent.end <= token.i and ent.label_ in ["PERSON", "ORG"]:
@@ -195,7 +186,6 @@ class GenderFairLanguage:
                                 referent = candidate
                                 break
 
-                # Determine pronoun role and replacement
                 if referent:
                     category = name_to_category[referent]
                     role = self._get_pronoun_role(token)
@@ -280,7 +270,6 @@ class GenderFairLanguage:
 
 
     def _find_adjective_noun_pairs(self, text: str, doc) -> List[Dict]:
-        """Find gender adjective-noun pairs."""
         corrections = []
         
         for i in range(len(doc) - 1):
@@ -305,19 +294,22 @@ class GenderFairLanguage:
         return corrections
 
     def _find_individual_terms(self, text: str, doc) -> List[Dict]:
-        """Find individual gendered terms."""
         corrections = []
         
         for term, replacements_list in self.gendered_terms.items():
-            if ' ' in term:
-                continue
+            # Remove the check for ' ' in term to include multi-word terms
+            pattern = rf'\b{re.escape(term)}\b'  # This handles terms with spaces as exact matches
+            matches = list(re.finditer(pattern, text, re.IGNORECASE))
             
-            for match in reversed(list(re.finditer(rf'\b{re.escape(term)}\b', text, re.IGNORECASE))):
+            for match in reversed(matches):
                 if self._is_within_quotes(doc, match.start(), match.end()):
                     continue
                 
                 original_text = match.group(0)
-                adjusted_replacements = [self._adjust_capitalization(original_text, repl) for repl in replacements_list]
+                adjusted_replacements = [
+                    self._adjust_capitalization(original_text, repl) 
+                    for repl in replacements_list
+                ]
                 
                 corrections.append({
                     "word_index": next((i for i, t in enumerate(doc) if t.idx <= match.start() < t.idx + len(t.text)), None),
@@ -330,7 +322,6 @@ class GenderFairLanguage:
         return corrections
 
     def _find_pronoun_replacements(self, text: str, doc, name_pronoun_map: Dict) -> List[Dict]:
-        """Find pronoun replacements with fallback to gender-fair language."""
         corrections = []
         name_to_category = {name.lower(): category for name, category in (name_pronoun_map or {}).items()}
 
@@ -383,9 +374,40 @@ class GenderFairLanguage:
                     })
 
         return corrections
+    
+    def _find_possessive_constructions(self, text: str, doc) -> List[Dict]:
+        corrections = []
+        for token in doc:
+            if token.text.lower() in GENDER_ADJECTIVES:
+                # Check for possessive constructions
+                case_children = [
+                    child for child in token.children 
+                    if child.dep_ == 'case' 
+                    and re.match(r"^['’]s?$", child.text.lower())
+                ]
+                if case_children:
+                    possessive_marker = case_children[0]
+                    start = token.idx
+                    end = possessive_marker.idx + len(possessive_marker.text)
+                    
+                    if end < len(text) and text[end] == ' ':
+                        end += 1
+                    
+                    if self._is_within_quotes(doc, start, end):
+                        continue
+                    
+                    # Create replacement entry
+                    original_span = text[start:end]
+                    corrections.append({
+                        "word_index": token.i,
+                        "original_text": original_span,
+                        "replacements": [""],
+                        "character_offset": start,
+                        "character_endset": end
+                    })
+        return corrections
 
     def _filter_overlapping_corrections(self, corrections: List[Dict]) -> List[Dict]:
-        """Filter out overlapping corrections, keeping the longest matches."""
         if not corrections:
             return []
             
@@ -401,7 +423,6 @@ class GenderFairLanguage:
         return filtered
 
     def process_text(self, text: str, name_pronoun_map: Optional[Dict] = None) -> Dict:
-        """Main processing method that returns original and revised text with corrections."""
         if not text or not isinstance(text, str):
             raise ValueError("Input text must be a non-empty string")
             
