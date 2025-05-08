@@ -297,8 +297,7 @@ class GenderFairLanguage:
         corrections = []
         
         for term, replacements_list in self.gendered_terms.items():
-            # Remove the check for ' ' in term to include multi-word terms
-            pattern = rf'\b{re.escape(term)}\b'  # This handles terms with spaces as exact matches
+            pattern = rf'\b{re.escape(term)}\b'  # Handles multi-word terms
             matches = list(re.finditer(pattern, text, re.IGNORECASE))
             
             for match in reversed(matches):
@@ -306,9 +305,18 @@ class GenderFairLanguage:
                     continue
                 
                 original_text = match.group(0)
+                # Filter out identical replacements
+                unique_replacements = [
+                    repl for repl in replacements_list 
+                    if repl.lower() != original_text.lower()
+                ]
+                
+                if not unique_replacements:
+                    continue  # Skip if no actual replacements
+                    
                 adjusted_replacements = [
                     self._adjust_capitalization(original_text, repl) 
-                    for repl in replacements_list
+                    for repl in unique_replacements
                 ]
                 
                 corrections.append({
@@ -323,9 +331,19 @@ class GenderFairLanguage:
 
     def _find_pronoun_replacements(self, text: str, doc, name_pronoun_map: Dict) -> List[Dict]:
         corrections = []
-        name_to_category = {name.lower(): category for name, category in (name_pronoun_map or {}).items()}
+        # Normalize all keys in the pronoun map to lowercase
+        name_to_category = {name.lower(): category for name, category in name_pronoun_map.items()}
+        processed_names = set(name_to_category.keys())
 
-        person_entities = [ent for ent in doc.ents if ent.label_ in ["PERSON", "ORG"]]
+        # Track all name variants from titles
+        name_variants = []
+        for name in processed_names:
+            name_variants.extend([
+                name,
+                name.replace('-', ' '),  # "adam-silver" -> "adam silver"
+                name.replace(' ', '-')    # "adam silver" -> "adam-silver"
+            ])
+
         NEUTRAL_PRONOUNS = {"i", "me", "my", "mine", "myself",
                             "we", "us", "our", "ours", "ourselves",
                             "you", "your", "yours", "yourself", "yourselves",
@@ -336,35 +354,42 @@ class GenderFairLanguage:
                 token.text.lower() not in NEUTRAL_PRONOUNS and
                 not self._is_within_quotes(doc, token.idx, token.idx + len(token.text))):
 
+                # Find closest matching name in previous context (case-insensitive)
                 referent = None
-                for ent in reversed(person_entities[:token.i]):
-                    if ent.end <= token.i:
-                        referent = ent.text
-                        break
-                
-                if token.dep_ in ["nsubj", "nsubjpass"]:
-                    role = "subject"
-                elif token.dep_ in ["dobj", "iobj", "pobj"]:
-                    role = "object"
-                elif token.dep_ == "poss" or token.tag_ == "PRP$":
-                    role = "possessive"
-                elif token.dep_ == "reflexive":
-                    role = "reflexive"
-                else:
-                    continue
-                
-                if referent and referent.lower() in name_to_category:
-                    category = name_to_category[referent.lower()]
+                lookback_window = doc[max(0, token.i-10):token.i]  # 10 tokens back
+                for prev_token in reversed(lookback_window):
+                    if prev_token.pos_ == 'PROPN':
+                        candidate = self._normalize_hyphenated_name(prev_token.text).lower()
+                        if candidate in processed_names:
+                            referent = candidate
+                            break
+                        for variant in [candidate, candidate.replace('-', ' ')]:
+                            if variant in name_to_category:
+                                referent = variant
+                                break
+                        if referent:
+                            break
+
+                if not referent:
+                    for ent in reversed(doc.ents):
+                        if ent.end <= token.i and ent.label_ in ["PERSON", "ORG"]:
+                            candidate = self._normalize_hyphenated_name(ent.text).lower()
+                            if candidate in processed_names:
+                                referent = candidate
+                                break
+
+                if referent:
+                    category = name_to_category.get(referent, None)
+                    if not category:
+                        category = "gender_fair"
+                    role = self._get_pronoun_role(token)
                     new_pronoun = DEFAULT_PRONOUNS[category][role]
                 else:
-                    new_pronoun = DEFAULT_PRONOUNS["gender_fair"][role]
+                    new_pronoun = DEFAULT_PRONOUNS["gender_fair"][self._get_pronoun_role(token)]
 
-                if token.text.istitle():
-                    new_pronoun = new_pronoun.capitalize()
-                elif token.text.isupper():
-                    new_pronoun = new_pronoun.upper()
-
-                if new_pronoun.lower() != token.text.lower():
+                # Apply capitalization and replacement
+                new_pronoun = self._adjust_capitalization(token.text, new_pronoun)
+                if new_pronoun != token.text:
                     corrections.append({
                         "word_index": token.i,
                         "original_text": token.text,
