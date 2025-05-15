@@ -56,6 +56,9 @@ class GenderFairLanguage:
 
     @staticmethod
     def _adjust_capitalization(original: str, replacement: str) -> str:
+        # Preserve replacement's casing if it has any uppercase letters
+        if any(c.isupper() for c in replacement):
+            return replacement
         if original.isupper():
             return replacement.upper()
         elif original.istitle():
@@ -347,7 +350,7 @@ class GenderFairLanguage:
         NEUTRAL_PRONOUNS = {"i", "me", "my", "mine", "myself",
                             "we", "us", "our", "ours", "ourselves",
                             "you", "your", "yours", "yourself", "yourselves",
-                            "they", "them", "their", "theirs", "themselves", "it", "its", "itself"}
+                            "they", "them", "their", "theirs", "themselves", "it", "its", "itself", "'s"}
 
         for token in doc:
             if (token.tag_ in ["PRP", "PRP$"] and 
