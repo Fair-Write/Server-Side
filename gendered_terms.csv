@@ -1,195 +1,195 @@
-"herself","themselves"
-"himself","themselves"
-"waiter","server"
-"waitress","server"
-"actress","actor"
-"policemen","police officer"
-"policeman","police officer"
-"policewoman","police officer"
-"policewomen","police officers"
-"fireman","firefighter"
-"firemen","firefighter"
-"firewoman","firefighter"
-"chairman","chairperson"
-"chairwoman","chairperson"
-"businessman","businessperson"
-"mankind","peoplekind"
-"businesswoman","businessperson"
-"spokesman","spokesperson"
-"salesman","salesperson"
-"postman","postal worker"
-"landlord","property owner"
-"landlady","property owner"
-"stewardess","flight attendant"
-"steward","flight attendant"
-"mailman","postal worker"
-"mailwoman","postal worker"
-"freshman","first-year student"
-"upperclassman","student"
-"middleman","intermediary"
-"workman","worker"
-"workwoman","worker"
-"cameraman","camera operator"
-"camerawoman","camera operator"
-"repairman","repairer"
-"repairmen","repairer"
-"repairwoman","repairer"
-"handyman","handyperson"
-"handywoman","handyperson"
-"craftsman","craftsperson"
-"craftswoman","craftsperson"
-"foreman","foreperson"
-"forewoman","foreperson"
-"congressman","congressperson"
-"congresswoman","congressperson"
-"ombudsman","ombudsperson"
-"fisherman","fisher"
-"fisherwoman","fisher"
-"weatherman","weathercaster"
-"weathergirl","weather reporter"
-"weatherwoman","weather reporter"
-"weatherperson","weather reporter"
-"spokesman","spokesperson"
-"spokeswoman","spokesperson"
-"spokesgirl","spokesperson"
-"man-made","manufactured","artificial synthetic"
-"man-kind","people"
-"manmade","manufactured"
-"mansize","human-size"
-"manpower","workforce"
-"man-sized","big"
-"janitor","cleaners"
-"janitress","cleaners"
-"seaman","sailor"
-"seawoman","sailor"
-"sportsmen","athletes"
-"layman","non-expert",
-"maid","helper"
-"brotherhood","community"
-"statesman","diplomat"
-"statesmanship","diplomacy"
-"stockman","stockperson"
-"pressmen","press operator"
-"pressman","press operator"
-"manhood","adulthood"
-"lady policeman","police officer"
-"lady police","police officer"
-"lady police officer","police officer"
-"lady doctor","doctor"
-"whore","prostituted person"
-"man-hours","labor time"
-"middleman","agent"
-"middle-man","agent"
-"lineman","line repairer"
-"lumbermen","lumberer"
-"watchmen","guards"
-"watchman","guards"
-"newsman","media people"
-"newsmen","media people"
-"comedienne","comedian"
-"poetess","poet"
-"emcee","host"
-"mother-in-law","parent-in-law"
-"father-in-law","parent-in-law"
-"brother-in-law","sibling-in-law"
-"sister-in-law","sibling-in-law"
-"son-in-law","child-in-law"
-"daughter-in-law","child-in-law"
-"manservant","servant"
-"menservants","servants"
-"womanservant","servant"
-"womanservants","servants"
-"boyfriend","partner"
-"girlfriend","partner"
-"boyfriends","partners"
-"girlfriends","partners"
-"husband","spouse"
-"wife","spouse"
-"wives","spouses"
-"husbands","spouses"
-"mothering","parenting"
-"fathering","parenting"
-"mothered","parented"
-"fathered","parented"
-"mothering","parenting"
-"fathering","parenting"
-"ladies","people"
-"ladies'","people's"
-"ladys' room","restroom"
-"ladies' room","restroom"
-"ladies room","restroom"
-"gentlemen's","people's"
-"gentlemen's room","restroom"
-"gentlemen room","restroom"
-"gentlemen","people"
-"businessmans","businesspeople"
-"businesswoman","businessperson"
-"businesswomen","businessperson"
-"businessmen","businessperson"
-"businessperson","businessperson"
-"businesspersons","businessperson"
-"stepfather","stepparent"
-"stepmother","stepparent"
-"stepbrother","step-sibling"
-"stepsister","step-sibling"
-"stepson","stepchild"
-"stepdaughter","stepchild"
-"baron","noble","peer"
-"baroness","noble","peer"
-"emperor","sovereign","ruler"
-"empress","sovereign","ruler"
-"king","monarch","sovereign"
-"queen","monarch","sovereign"
-"manhole","utility hole","maintenance hole"
-"manning","staffing","operating"
-"manhunt","search operation"
-"showman","performer","entertainer"
-"showwoman","performer","entertainer"
-"godfather","godparent","master"
-"godmother","godparent","master"
-"deliveryman","delivery person"
-"deliverywoman","delivery person"
-"gentlemen","gentleperson"
-"gentlewoman","gentleperson"
-"ex-boyfriend","former partner"
-"ex-girlfriend","former partner"
-"alumnus","alumni","graduate"
-"alumna","alumni,"graduate"
-"freshman","first-year","first-year student"
-"sophomore","second-year","second-year student"
-"junior","third-year","third-year student"
-"senior","fourth-year","fourth-year student"
-"upperclassman","upper-year student"
-"family man","family-oriented person"
-"mother","parent"
-"father","parent"
-"brother","sibling"
-"sister","sibling"
-"men","person","people"
-"man","person","people"
-"women","person","people"
-"woman","persons","people"
-"girl","child","children","kid","student"
-"boy","child","children","kid","student"
-"son","child"
-"sons","children","kids"
-"daughter","child"
-"daughters","children","kids"
-"brothers","siblings"
-"boys","children","kids","students"
-"girls","children","kids","students"
-"mothers","parents"
-"fathers","parents"
-"brothers","siblings"
-"male","people","person"
-"female","people","person"
-"lady","people","person"
-"gay","LGBTQIA+	","people","person"
-"gays","LGBTQIA+	","people","person"
-"bisexual","LGBTQIA+","SOGIESC","people","person"
-"bisexuals","LGBTQIA+","SOGIESC","people","person"
-"lesbian","LGBTQIA+","SOGIESC","people","person"
-"lesbians","LGBTQIA+","SOGIESC","people","person"
-"homosexual","LGBTQIA+","SOGIESC","people","person"
-"homosexuals","LGBTQIA+","SOGIESC","people","person"
-"same-sex","LGBTQIA+","SOGIESC","people","person"
+herself,themselves
+himself,themselves
+waiter,server
+waitress,server
+actress,actor
+policemen,police officer
+policeman,police officer
+policewoman,police officer
+policewomen,police officers
+fireman,firefighter
+firemen,firefighter
+firewoman,firefighter
+chairman,chairperson
+chairwoman,chairperson
+businessman,businessperson
+mankind,peoplekind
+businesswoman,businessperson
+spokesman,spokesperson
+salesman,salesperson
+postman,postal worker
+landlord,property owner
+landlady,property owner
+stewardess,flight attendant
+steward,flight attendant
+mailman,postal worker
+mailwoman,postal worker
+freshman,first-year student
+upperclassman,student
+middleman,intermediary
+workman,worker
+workwoman,worker
+cameraman,camera operator
+camerawoman,camera operator
+repairman,repairer
+repairmen,repairer
+repairwoman,repairer
+handyman,handyperson
+handywoman,handyperson
+craftsman,craftsperson
+craftswoman,craftsperson
+foreman,foreperson
+forewoman,foreperson
+congressman,congressperson
+congresswoman,congressperson
+ombudsman,ombudsperson
+fisherman,fisher
+fisherwoman,fisher
+weatherman,weathercaster
+weathergirl,weather reporter
+weatherwoman,weather reporter
+weatherperson,weather reporter
+spokesman,spokesperson
+spokeswoman,spokesperson
+spokesgirl,spokesperson
+man-made,manufactured,artificial synthetic
+man-kind,people
+manmade,manufactured
+mansize,human-size
+manpower,workforce
+man-sized,big
+janitor,cleaners
+janitress,cleaners
+seaman,sailor
+seawoman,sailor
+sportsmen,athletes
+layman,non-expert
+maid,helper
+brotherhood,community
+statesman,diplomat
+statesmanship,diplomacy
+stockman,stockperson
+pressmen,press operator
+pressman,press operator
+manhood,adulthood
+lady policeman,police officer
+lady police,police officer
+lady police officer,police officer
+lady doctor,doctor
+whore,prostituted person
+man-hours,labor time
+middleman,agent
+middle-man,agent
+lineman,line repairer
+lumbermen,lumberer
+watchmen,guards
+watchman,guards
+newsman,media people
+newsmen,media people
+comedienne,comedian
+poetess,poet
+emcee,host
+mother-in-law,parent-in-law
+father-in-law,parent-in-law
+brother-in-law,sibling-in-law
+sister-in-law,sibling-in-law
+son-in-law,child-in-law
+daughter-in-law,child-in-law
+manservant,servant
+menservants,servants
+womanservant,servant
+womanservants,servants
+boyfriend,partner
+girlfriend,partner
+boyfriends,partners
+girlfriends,partners
+husband,spouse
+wife,spouse
+wives,spouses
+husbands,spouses
+mothering,parenting
+fathering,parenting
+mothered,parented
+fathered,parented
+mothering,parenting
+fathering,parenting
+ladies,people
+ladies',people's
+ladys' room,restroom
+ladies' room,restroom
+ladies room,restroom
+gentlemen's,people's
+gentlemen's room,restroom
+gentlemen room,restroom
+gentlemen,people
+businessmans,businesspeople
+businesswoman,businessperson
+businesswomen,businessperson
+businessmen,businessperson
+businessperson,businessperson
+businesspersons,businessperson
+stepfather,stepparent
+stepmother,stepparent
+stepbrother,step-sibling
+stepsister,step-sibling
+stepson,stepchild
+stepdaughter,stepchild
+baron,noble,peer
+baroness,noble,peer
+emperor,sovereign,ruler
+empress,sovereign,ruler
+king,monarch,sovereign
+queen,monarch,sovereign
+manhole,utility hole,maintenance hole
+manning,staffing,operating
+manhunt,search operation
+showman,performer,entertainer
+showwoman,performer,entertainer
+godfather,godparent,master
+godmother,godparent,master
+deliveryman,delivery person
+deliverywoman,delivery person
+gentlemen,gentleperson
+gentlewoman,gentleperson
+ex-boyfriend,former partner
+ex-girlfriend,former partner
+alumnus,alumni,graduate
+alumna,"alumni,graduate"""
+freshman,first-year,first-year student
+sophomore,second-year,second-year student
+junior,third-year,third-year student
+senior,fourth-year,fourth-year student
+upperclassman,upper-year student
+family man,family-oriented person
+mother,parent
+father,parent
+brother,sibling
+sister,sibling
+men,person,people
+man,person,people
+women,person,people
+woman,persons,people
+girl,child,children,kid,student
+boy,child,children,kid,student
+son,child
+sons,children,kids
+daughter,child
+daughters,children,kids
+brothers,siblings
+boys,children,kids,students
+girls,children,kids,students
+mothers,parents
+fathers,parents
+brothers,siblings
+male,people,person
+female,people,person
+lady,people,person
+gay,LGBTQIA+,people,person
+gays,LGBTQIA+,people,person
+bisexual,LGBTQIA+,SOGIESC,people,person
+bisexuals,LGBTQIA+,SOGIESC,people,person
+lesbian,LGBTQIA+,SOGIESC,people,person
+lesbians,LGBTQIA+,SOGIESC,people,person
+homosexual,LGBTQIA+,SOGIESC,people,person
+homosexuals,LGBTQIA+,SOGIESC,people,person
+same-sex,LGBTQIA+,SOGIESC,people,person
