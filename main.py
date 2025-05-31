@@ -131,7 +131,7 @@ def bulk_create_terms(request: GenderTermBulkCreate):
 
 
 @app.get("/count")
-def get_count_route():
+def get_count_request():
     current_value = read_counter(COUNTER_FILE)
     return {"count": current_value}
 
