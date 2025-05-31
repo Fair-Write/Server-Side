@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, RootModel
 from typing import Dict, List
 from typing import Literal
 
@@ -12,3 +12,22 @@ class GFLBody(BaseModel):
         "John": "male",
         "Jane": "female"
     }
+
+class GenderTermCreate(BaseModel):
+    term: str = Field(..., example="chairman")
+    options: List[str] = Field(..., example=["chairperson", "chair"])
+
+
+class GenderTermUpdate(BaseModel):
+    options: List[str] = Field(..., example=["chairperson", "moderator"])
+
+
+
+class GenderTermBulkCreate(RootModel[Dict[str, List[str]]]):
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "chairman": ["chairperson", "chair"],
+                "fireman": ["firefighter"]
+            }
+        }
