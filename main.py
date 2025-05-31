@@ -1,10 +1,11 @@
-from fastapi import FastAPI
-import language_tool_python
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-import csv
-
+import language_tool_python
 from main_gfl import load_gfl
-from schemas import GrammarBody, GFLBody
+from csvCrud import GenderTermManager
+from schemas import GrammarBody, GFLBody, GenderTermCreate, GenderTermUpdate, GenderTermBulkCreate
+from pathlib import Path
+from count import read_counter, increment_counter , decrement_counter 
 
 # Load models and tools
 tool = language_tool_python.LanguageTool('en-US')
@@ -12,9 +13,16 @@ tool = language_tool_python.LanguageTool('en-US')
 # Load your GenderFairLanguage instance
 gfl = load_gfl()
 
+# Initialize the TermManager with the path to your CSV file
+genderTermManager = GenderTermManager("gendered_terms.csv")
+
 # Initialize FastAPI
 app = FastAPI()
 
+# Initialize the counter file
+COUNTER_FILE = "count.csv"
+
+# Add CORS middleware to allow cross-origin requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -29,7 +37,7 @@ async def read_root():
 
 
 @app.post("/grammar")
-async def generate(body: GrammarBody):
+async def grammar_revision(body: GrammarBody):
     text = body.prompt
     # Analyze the text
     matches = tool.check(text)
@@ -63,9 +71,77 @@ async def generate(body: GrammarBody):
 
 
 @app.post("/gfl")
-async def process_text_endpoint(body: GFLBody):
+async def gender_fair_revision(body: GFLBody):
     input_text = body.prompt
     preferred_pronouns = body.pronoun_map
     # Process the text using the GenderFairLanguage instance
     result = gfl.process_text(input_text, preferred_pronouns)
-    return result
+    
+    # Count request increment
+    increment_counter(COUNTER_FILE)
+    count = read_counter(COUNTER_FILE)
+    
+    return {
+        "count": count,
+        **result,
+    }
+
+@app.get("/terms/{term}")
+def get_term(term: str):
+        result = genderTermManager.find_term(term)
+        if not result:
+            raise HTTPException(status_code=404, detail="Term not found")
+        return result
+
+@app.put("/terms/{term}")
+def update_term(term: str, update_data: GenderTermUpdate):
+    try:
+        genderTermManager.update(term, update_data.options)
+        return {"message": f"Term '{term}' updated"}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.delete("/terms/{term}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_term(term: str):
+    try:
+        genderTermManager.delete(term)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    
+@app.post("/terms", status_code=status.HTTP_201_CREATED)
+def create_term(term_data: GenderTermCreate):
+    try:
+        genderTermManager.create(term_data.term, term_data.options)
+        return {"message": f"Term '{term_data.term}' created"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/terms/bulk")
+def bulk_create_terms(request: GenderTermBulkCreate):
+        created = genderTermManager.create_bulk(request.terms)
+        return {
+            "created_terms": created,
+            "count": len(created),
+            "message": f"Successfully created {len(created)} terms"
+        }
+
+@app.get("/terms")
+def list_all_terms():
+        return genderTermManager.get_all_term()
+
+@app.get("/increment")
+def increment_route():
+    increment_counter(COUNTER_FILE)
+    current_value = read_counter(COUNTER_FILE)
+    return {"new_count": current_value}
+
+@app.get("/count")
+def get_count_route():
+    current_value = read_counter(COUNTER_FILE)
+    return {"count": current_value}
+
+@app.get("/decrement")
+def decrement_route():
+    decrement_counter(COUNTER_FILE)
+    current_value = read_counter(COUNTER_FILE)
+    return {"new_count": current_value}
