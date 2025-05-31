@@ -129,19 +129,20 @@ def bulk_create_terms(request: GenderTermBulkCreate):
             "message": f"Successfully created {len(created)} terms"
         }
 
-@app.get("/increment")
-def increment_route():
-    increment_counter(COUNTER_FILE)
-    current_value = read_counter(COUNTER_FILE)
-    return {"new_count": current_value}
 
 @app.get("/count")
 def get_count_route():
     current_value = read_counter(COUNTER_FILE)
     return {"count": current_value}
 
-@app.get("/decrement")
-def decrement_route():
-    decrement_counter(COUNTER_FILE)
-    current_value = read_counter(COUNTER_FILE)
-    return {"new_count": current_value}
+# @app.get("/increment")
+# def increment_route():
+#     increment_counter(COUNTER_FILE)
+#     current_value = read_counter(COUNTER_FILE)
+#     return {"new_count": current_value}
+
+# @app.get("/decrement")
+# def decrement_route():
+#     decrement_counter(COUNTER_FILE)
+#     current_value = read_counter(COUNTER_FILE)
+#     return {"new_count": current_value}
