@@ -85,6 +85,10 @@ async def gender_fair_revision(body: GFLBody):
         "count": count,
         **result,
     }
+    
+@app.get("/terms")
+def list_all_terms():
+        return genderTermManager.get_all_term()
 
 @app.get("/terms/{term}")
 def get_term(term: str):
@@ -124,10 +128,6 @@ def bulk_create_terms(request: GenderTermBulkCreate):
             "count": len(created),
             "message": f"Successfully created {len(created)} terms"
         }
-
-@app.get("/terms")
-def list_all_terms():
-        return genderTermManager.get_all_term()
 
 @app.get("/increment")
 def increment_route():
