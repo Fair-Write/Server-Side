@@ -120,16 +120,6 @@ def create_term(term_data: GenderTermCreate):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/terms/bulk")
-def bulk_create_terms(request: GenderTermBulkCreate):
-        created = genderTermManager.create_bulk(request.terms)
-        return {
-            "created_terms": created,
-            "count": len(created),
-            "message": f"Successfully created {len(created)} terms"
-        }
-
-
 @app.get("/count")
 def get_count_request():
     current_value = read_counter(COUNTER_FILE)

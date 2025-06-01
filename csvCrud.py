@@ -59,18 +59,5 @@ class GenderTermManager:
             raise KeyError(f"Term '{term}' not found.")
         self.save(new_terms)
 
-    def create_bulk(self, term_dict: Dict[str, List[str]]) -> Dict[str, List[str]]:
-        all_terms = self.load()
-        existing_terms = {entry.term for entry in all_terms}
-        new_entries = []
-
-        for term, options in term_dict.items():
-            if term not in existing_terms:
-                new_entries.append(GenderTerm(term, options))
-
-        self.save(all_terms + new_entries)
-        return {entry.term: entry.options for entry in new_entries}
-
-
     def get_all_term(self) -> Dict[str, List[str]]:
         return {entry.term: entry.options for entry in self.load()}
