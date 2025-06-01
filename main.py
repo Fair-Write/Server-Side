@@ -10,9 +10,6 @@ from count import read_counter, increment_counter , decrement_counter
 # Load models and tools
 tool = language_tool_python.LanguageTool('en-US')
 
-# Load your GenderFairLanguage instance
-gfl = load_gfl()
-
 # Initialize the TermManager with the path to your CSV file
 genderTermManager = GenderTermManager("gendered_terms.csv")
 
@@ -75,6 +72,8 @@ async def gender_fair_revision(body: GFLBody):
     input_text = body.prompt
     preferred_pronouns = body.pronoun_map
     # Process the text using the GenderFairLanguage instance
+    # Load your GenderFairLanguage instance
+    gfl = load_gfl()
     result = gfl.process_text(input_text, preferred_pronouns)
     
     # Count request increment
