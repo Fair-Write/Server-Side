@@ -23,11 +23,5 @@ class GenderTermUpdate(BaseModel):
 
 
 
-class GenderTermBulkCreate(RootModel[Dict[str, List[str]]]):
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "chairman": ["chairperson", "chair"],
-                "fireman": ["firefighter"]
-            }
-        }
+class GenderTermBulkCreate(BaseModel):
+    terms: List[GenderTermCreate]
