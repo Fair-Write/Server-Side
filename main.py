@@ -123,15 +123,3 @@ def create_term(term_data: GenderTermCreate):
 def get_count_request():
     current_value = read_counter(COUNTER_FILE)
     return {"count": current_value}
-
-# @app.get("/increment")
-# def increment_route():
-#     increment_counter(COUNTER_FILE)
-#     current_value = read_counter(COUNTER_FILE)
-#     return {"new_count": current_value}
-
-# @app.get("/decrement")
-# def decrement_route():
-#     decrement_counter(COUNTER_FILE)
-#     current_value = read_counter(COUNTER_FILE)
-#     return {"new_count": current_value}
