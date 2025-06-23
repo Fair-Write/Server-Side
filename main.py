@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import language_tool_python
 from main_gfl import load_gfl
 from csvCrud import GenderTermManager
-from schemas import GrammarBody, GFLBody, GenderTermCreate, GenderTermUpdate, GenderTermBulkCreate
+from schemas import GrammarBody, GFLBody, GenderTermCreate, GenderTermUpdate
 from pathlib import Path
-from count import read_counter, increment_counter , decrement_counter 
+from count import read_counter, increment_counter, update_counter 
 
 # Load models and tools
 tool = language_tool_python.LanguageTool('en-US')
@@ -27,10 +27,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.get("/")
-async def read_root():    
-    return {"message": "Welcome to our API!"}
 
 
 @app.post("/grammar")
@@ -123,3 +119,17 @@ def create_term(term_data: GenderTermCreate):
 def get_count_request():
     current_value = read_counter(COUNTER_FILE)
     return {"count": current_value}
+
+# set count
+@app.post("/count")
+def set_count_request(count: int):
+    if count < 0:
+        raise HTTPException(status_code=400, detail="Count must be a non-negative integer")
+    
+    update_counter(COUNTER_FILE, count)
+    
+    return {"message": "Count updated successfully", "count": count}
+
+@app.get("/")
+async def read_root():    
+    return {"message": "Welcome to our API!"}
