@@ -56,4 +56,4 @@ The app will be available at [http://127.0.0.1:80/](http://127.0.0.1:80/).
 
 ## Frontend Integration
 
-- [FairWriteSide](https://github.com/Fair-Write/Client-Side.git): The official frontend for FairWrite, providing an intuitive interface for interacting with the backend API.
+- [FairWrite/Client-Side](https://github.com/Fair-Write/Client-Side.git): The official frontend for FairWrite, providing an intuitive interface for interacting with the backend API.
