@@ -6,6 +6,7 @@ FairWrite is a web-based text editor that provides grammar and gender-fair revis
 
 - **Grammar Check**: Automatically detect and suggest corrections for grammatical errors.
 - **Gender-Fair Language**: Helps users adopt gender-neutral language and avoid biased terms.
+- **Control Gender Terms Revision (Admin Only)**: Admin users can manage and customize gender term revisions with full CRUD (Create, Read, Update, Delete) support, allowing tailored gender-fair language rules.
 
 ## Tech Stack
 
