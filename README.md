@@ -1,4 +1,4 @@
-# FairWrite
+# FairWrite (Server-Side)
 
 FairWrite is a web-based text editor that provides grammar and gender-fair revisions. Built with FastAPI, it integrates with powerful NLP tools like `spaCy` and `language-tool-python` to enhance writing for clarity, accuracy, and inclusivity.
 
@@ -6,7 +6,6 @@ FairWrite is a web-based text editor that provides grammar and gender-fair revis
 
 - **Grammar Check**: Automatically detect and suggest corrections for grammatical errors.
 - **Gender-Fair Language**: Helps users adopt gender-neutral language and avoid biased terms.
-- **Fast and Reliable**: Powered by FastAPI, ensuring quick response times for real-time text editing.
 
 ## Tech Stack
 
@@ -54,3 +53,7 @@ uvicorn main:app --port 80
 ```
 
 The app will be available at [http://127.0.0.1:80/](http://127.0.0.1:80/).
+
+## Frontend Integration
+
+- [FairWriteSide](https://github.com/Fair-Write/Client-Side.git): The official frontend for FairWrite, providing an intuitive interface for interacting with the backend API.
