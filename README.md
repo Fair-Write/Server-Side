@@ -2,13 +2,13 @@
 
 FairWrite is a web-based text editor that provides grammar and gender-fair revisions. Built with FastAPI, it integrates with powerful NLP tools like `spaCy` and `language-tool-python` to enhance writing for clarity, accuracy, and inclusivity.
 
-## Features
+## ✨ Features
 
 - **Grammar Check**: Automatically detect and suggest corrections for grammatical errors.
 - **Gender-Fair Language**: Helps users adopt gender-neutral language and avoid biased terms.
 - **Control Gender Terms Revision (Admin Only)**: Admin users can manage and customize gender term revisions with full CRUD (Create, Read, Update, Delete) support, allowing tailored gender-fair language rules.
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 - **FastAPI**: Web framework for building APIs quickly and efficiently.
 - **Uvicorn**: ASGI server for serving FastAPI apps.
@@ -16,7 +16,7 @@ FairWrite is a web-based text editor that provides grammar and gender-fair revis
 - **Language Tool**: Grammar checking and text analysis.
 - **spaCy**: NLP library for processing text, including tokenization and named entity recognition.
 
-## Installation
+## 📦 Installation
 
 Follow these steps to get the project up and running:
 
