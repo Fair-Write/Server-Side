@@ -1,10 +1,13 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+from time import time
+from math import ceil
 import language_tool_python
 from main_gfl import load_gfl
 from csvCrud import GenderTermManager
 from schemas import GrammarBody, GFLBody, GenderTermCreate, GenderTermUpdate
-from pathlib import Path
 from count import read_counter, increment_counter, update_counter 
 
 # Load models and tools
@@ -27,6 +30,44 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# In-memory store for request timestamps
+rate_limit_store = {}
+
+# Rate limit settings
+RATE_LIMIT = 10      # number of allowed requests
+TIME_WINDOW = 30    # seconds
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        client_ip = request.client.host
+
+        current_time = time()
+        request_times = rate_limit_store.get(client_ip, [])
+
+        # Keep only requests inside the time window
+        request_times = [t for t in request_times if current_time - t < TIME_WINDOW]
+
+        if len(request_times) >= RATE_LIMIT:
+            # Calculate wait time until the oldest request expires
+            earliest_request = min(request_times)
+            retry_after = ceil(TIME_WINDOW - (current_time - earliest_request))
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "detail": "Too many requests. Try again later.",
+                    "retry_after_seconds": retry_after
+                },
+                headers={"Retry-After": str(retry_after)}
+            )
+
+        request_times.append(current_time)
+        rate_limit_store[client_ip] = request_times
+
+        response = await call_next(request)
+        return response
+
+app.add_middleware(RateLimitMiddleware)
 
 
 @app.post("/grammar")
