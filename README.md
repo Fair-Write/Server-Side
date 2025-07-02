@@ -23,7 +23,7 @@ Follow these steps to set up the project:
 
 ### 1. Install Python
 
-Make sure you have **Python 3+** installed. You can download it from [python.org](https://www.python.org/downloads/).
+Make sure you have **Python 3.9+** installed. You can download it from [python.org](https://www.python.org/downloads/).
 
 ### 2. Clone the Repository
 
@@ -35,16 +35,16 @@ cd fairwrite
 ### 3. Create and Activate a Virtual Environment
 
 ```bash
-python -m venv venv
+python -m venv .venv
 ```
 
 - **On macOS/Linux:**
      ```bash
-     source venv/bin/activate
+     source .venv/bin/activate
      ```
 - **On Windows:**
      ```bash
-     venv\Scripts\activate
+     .venv\Scripts\activate
      ```
 
 ### 4. Install Dependencies
