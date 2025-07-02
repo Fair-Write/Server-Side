@@ -289,7 +289,7 @@ def main_gfl(text, terms_csv='gendered_terms.csv', name_pronoun_map=None):
     }
 
 # Example usage
-text = """ John said he would help Mary with her project because she needed him.  """
+text = """Mr. Smith is here. He is a great teacher. Mrs. Johnson and she loves to eat in men bathroom."""
 name_pronoun_map = {
     "John": "gender_fair",
     "Mary": "female"
