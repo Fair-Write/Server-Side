@@ -71,4 +71,4 @@ The app will be available at [http://127.0.0.1:80/](http://127.0.0.1:80/).
 
 ## 🚀 Frontend Integration
 
-See [FairWrite Client-Side](https://github.com/yourusername/fairwrite-client) for the official frontend interface.
+For the official frontend interface, refer to the [FairWrite Client-Side](https://github.com/yourusername/fairwrite-client) repository.
