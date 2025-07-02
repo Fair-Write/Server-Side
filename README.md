@@ -4,51 +4,62 @@ FairWrite is a web-based text editor that provides grammar and gender-fair revis
 
 ## ✨ Features
 
-- **Grammar Check**: Automatically detect and suggest corrections for grammatical errors.
-- **Gender-Fair Language**: Helps users adopt gender-neutral language and avoid biased terms.
-- **Custom Preferred Pronoun**: Users can specify their preferred pronouns, ensuring personalized and respectful language suggestions.
-- **Control Gender Terms Revision (Admin Only)**: Admin users can manage and customize gender term revisions with full CRUD (Create, Read, Update, Delete) support, allowing tailored gender-fair language rules.
+- **Grammar Check:** Detects and suggests corrections for grammatical errors.
+- **Gender-Fair Language:** Encourages gender-neutral language and avoids biased terms.
+- **Custom Preferred Pronoun:** Users can specify their preferred pronouns for personalized suggestions.
+- **Admin Gender Terms Control:** Admins can manage and customize gender term revisions (CRUD support).
 
 ## 🛠️ Tech Stack
 
-- **FastAPI**: Web framework for building APIs quickly and efficiently.
-- **Uvicorn**: ASGI server for serving FastAPI apps.
-- **Pydantic**: Data validation and settings management.
-- **Language Tool**: Grammar checking and text analysis.
-- **spaCy**: NLP library for processing text, including tokenization and named entity recognition.
+- **FastAPI:** Web framework for building APIs.
+- **Uvicorn:** ASGI server for FastAPI apps.
+- **Pydantic:** Data validation and settings management.
+- **Language Tool:** Grammar checking and text analysis.
+- **spaCy:** NLP library for text processing.
 
 ## 📦 Installation
 
-Follow these steps to get the project up and running:
+Follow these steps to set up the project:
 
-### Step 1: Clone the repository
+### 1. Install Python
 
-Clone this project to your local machine:
+Make sure you have **Python 3+** installed. You can download it from [python.org](https://www.python.org/downloads/).
+
+### 2. Clone the Repository
 
 ```bash
 git clone https://github.com/yourusername/fairwrite.git
 cd fairwrite
 ```
 
-### Step 2: Install dependencies
+### 3. Create and Activate a Virtual Environment
 
-Install all required packages using `requirements.txt`:
+```bash
+python -m venv venv
+```
+
+- **On macOS/Linux:**
+     ```bash
+     source venv/bin/activate
+     ```
+- **On Windows:**
+     ```bash
+     venv\Scripts\activate
+     ```
+
+### 4. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Step 3: Download spaCy Model
-
-Download the English model for spaCy:
+### 5. Download spaCy Model
 
 ```bash
 python -m spacy download en_core_web_sm
 ```
 
-### Step 4: Run the Application
-
-Start the web app locally with Uvicorn:
+### 6. Run the Application
 
 ```bash
 uvicorn main:app --port 80
@@ -56,6 +67,8 @@ uvicorn main:app --port 80
 
 The app will be available at [http://127.0.0.1:80/](http://127.0.0.1:80/).
 
-## Frontend Integration
+---
 
-- [FairWrite/Client-Side](https://github.com/Fair-Write/Client-Side.git): The official frontend for FairWrite, providing an intuitive interface for interacting with the backend API.
+## 🚀 Frontend Integration
+
+See [FairWrite Client-Side](https://github.com/yourusername/fairwrite-client) for the official frontend interface.

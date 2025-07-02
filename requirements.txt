@@ -8,11 +8,3 @@ spacy
 # python -m spacy download en_core_web_sm
 # uvicorn main:app --port 80
 
-# "he","they"
-# "him","them"
-# "his","their"
-# "he's","they're"
-# "she","they"
-# "her","their"
-# "hers","theirs"
-# "she's","they're"
